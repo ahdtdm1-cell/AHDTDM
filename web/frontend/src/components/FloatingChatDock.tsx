@@ -27,7 +27,7 @@ export const FloatingChatDock: React.FC<FloatingChatDockProps> = ({
   if (activeChats.length === 0) return null;
 
   return (
-    <div className="fixed bottom-0 right-4 z-40 flex items-end gap-3 pointer-events-auto">
+    <div className="hidden sm:flex fixed bottom-0 right-4 z-40 items-end gap-3 pointer-events-auto">
       {activeChats.map((chat) => (
         <FloatingChatWindow
           key={chat.conversationId}

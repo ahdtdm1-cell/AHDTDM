@@ -114,13 +114,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-opacity duration-300">
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white dark:bg-slate-900/95 p-8 border border-slate-200 dark:border-white/10 shadow-2xl backdrop-blur-2xl text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md transition-opacity duration-300">
+      <div className="relative w-full max-w-md max-h-[92vh] overflow-y-auto rounded-3xl bg-white/95 dark:bg-[#0B0F17]/95 p-6 sm:p-8 border border-slate-200/80 dark:border-white/10 shadow-2xl backdrop-blur-2xl text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+          className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors press-tactile cursor-pointer"
           aria-label="Đóng"
         >
           <X className="w-5 h-5" />
@@ -128,13 +128,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
         {/* Modal Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-600/20 text-blue-500 dark:text-blue-400 mb-3 border border-blue-500/30">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 mb-3 ring-6 ring-blue-500/5">
             <Shield className="w-6 h-6" />
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             {isLogin ? 'Xác thực tài khoản' : 'Tạo tài khoản Thành viên'}
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">
             {isLogin
               ? 'Đăng nhập với tài khoản Thành viên hoặc Admin'
               : 'Đăng ký tài khoản để tin nhắn của bạn được lưu vĩnh viễn trong DB'}
@@ -142,12 +142,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         </div>
 
         {/* Segmented Control Tabs (Apple Style) */}
-        <div className="flex p-1 mb-6 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-white/5">
+        <div className="flex p-1 mb-6 rounded-2xl bg-slate-200/60 dark:bg-white/5 border border-slate-300/40 dark:border-white/5">
           <button
             type="button"
             onClick={() => { setIsLogin(true); setError(null); setSuccessMsg(null); loadCaptcha(); }}
-            className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all duration-200 ${
-              isLogin ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all duration-200 cursor-pointer press-tactile ${
+              isLogin ? 'bg-white dark:bg-white/15 text-slate-900 dark:text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Đăng nhập
@@ -155,8 +155,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           <button
             type="button"
             onClick={() => { setIsLogin(false); setError(null); setSuccessMsg(null); loadCaptcha(); }}
-            className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all duration-200 ${
-              !isLogin ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all duration-200 cursor-pointer press-tactile ${
+              !isLogin ? 'bg-white dark:bg-white/15 text-slate-900 dark:text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Đăng ký
@@ -273,7 +273,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-6 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            className="w-full mt-6 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50 press-tactile cursor-pointer"
           >
             {loading ? (
               <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

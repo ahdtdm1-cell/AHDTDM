@@ -54,7 +54,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   };
 
   return (
-    <div className="pt-3 border-t border-slate-100 dark:border-slate-700/60 flex flex-col gap-3">
+    <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex flex-col gap-3">
       {/* Input box */}
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
         <img
@@ -63,7 +63,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
             `https://api.dicebear.com/7.x/initials/svg?seed=${currentUser?.username || 'user'}`
           }
           alt="User"
-          className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+          className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-white/10 shrink-0"
         />
         <div className="flex-1 relative flex items-center">
           <input
@@ -74,12 +74,12 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             disabled={isSubmitting}
-            className="w-full bg-slate-100 dark:bg-slate-700/60 rounded-full px-4 py-2 pr-10 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-hidden border border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
+            className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full px-4 py-2 pr-10 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-hidden border border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
           />
           <button
             type="submit"
             disabled={isSubmitting || !content.trim()}
-            className="absolute right-2 text-blue-600 disabled:opacity-40 hover:text-blue-700 transition-colors cursor-pointer"
+            className="absolute right-2 text-blue-600 disabled:opacity-40 hover:text-blue-700 transition-colors press-tactile cursor-pointer"
           >
             {isSubmitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -102,14 +102,14 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                   `https://api.dicebear.com/7.x/initials/svg?seed=${comment.author?.username || comment.author_id}`
                 }
                 alt="Commenter"
-                className="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0 mt-0.5"
+                className="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-white/10 shrink-0 mt-0.5"
               />
               <div className="flex-1">
-                <div className="inline-block bg-slate-100 dark:bg-slate-700/60 rounded-2xl px-3.5 py-2 max-w-[90%]">
-                  <div className="font-bold text-xs text-slate-800 dark:text-slate-100">
+                <div className="inline-block bg-slate-100 dark:bg-slate-800/80 rounded-2xl px-3.5 py-2 max-w-[90%] border border-slate-200/50 dark:border-white/5">
+                  <div className="font-bold text-xs text-slate-900 dark:text-white">
                     {comment.author?.display_name || comment.author?.username || 'Người dùng'}
                   </div>
-                  <p className="text-xs text-slate-700 dark:text-slate-200 mt-0.5 break-words">
+                  <p className="text-xs text-slate-700 dark:text-slate-200 mt-0.5 break-words leading-relaxed">
                     {comment.content}
                   </p>
                 </div>
@@ -118,7 +118,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                   {isAuthor && (
                     <button
                       onClick={() => handleDelete(comment.id)}
-                      className="hover:text-rose-500 transition-colors flex items-center gap-0.5 cursor-pointer opacity-0 group-hover:opacity-100"
+                      className="hover:text-rose-500 transition-colors flex items-center gap-0.5 cursor-pointer opacity-70 sm:opacity-0 group-hover:opacity-100"
                     >
                       <Trash2 className="w-3 h-3" /> Xóa
                     </button>

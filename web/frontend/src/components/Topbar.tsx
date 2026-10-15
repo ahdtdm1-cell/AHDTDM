@@ -111,35 +111,35 @@ export const Topbar: React.FC<TopbarProps> = ({
   }, [searchQuery]);
 
   return (
-    <header className="sticky top-0 z-40 h-14 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between transition-colors shadow-xs">
+    <header className="sticky top-0 z-40 h-14 bg-white/85 dark:bg-[#090B10]/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/10 px-3 sm:px-4 flex items-center justify-between transition-colors">
       {/* Left: Brand & Search */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           onClick={() => onSelectTab('feed')}
-          className="flex items-center gap-2 font-bold text-xl tracking-tight bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2 font-bold text-lg sm:text-xl tracking-tight text-slate-900 dark:text-white hover:opacity-90 transition-opacity press-tactile shrink-0"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-            <MessageSquare className="w-5 h-5 fill-current" />
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
+            <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
           </div>
-          <span className="hidden sm:inline">SocialChat</span>
+          <span className="hidden sm:inline font-bold">SocialChat</span>
         </button>
 
         {/* Search bar */}
-        <div ref={searchRef} className="relative ml-2">
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full px-3 py-1.5 w-44 md:w-64 border border-transparent focus-within:border-blue-500 focus-within:bg-white dark:focus-within:bg-slate-950 transition-all">
+        <div ref={searchRef} className="relative ml-1 sm:ml-2">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800/70 hover:bg-slate-200/70 dark:hover:bg-slate-800 rounded-full px-3 py-1.5 w-36 xs:w-44 sm:w-56 md:w-64 border border-transparent focus-within:border-blue-500 focus-within:bg-white dark:focus-within:bg-slate-950 transition-all">
             <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
             <input
               type="text"
               placeholder="Tìm kiếm bạn bè..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent text-sm w-full outline-hidden text-slate-800 dark:text-slate-100 placeholder-slate-400"
+              className="bg-transparent text-xs sm:text-sm w-full outline-hidden text-slate-800 dark:text-slate-100 placeholder-slate-400"
             />
           </div>
 
           {/* Search Dropdown Results */}
           {searchResults.length > 0 && (
-            <div className="absolute top-11 left-0 w-72 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 py-2 z-50">
+            <div className="absolute top-11 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/80 dark:border-white/10 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
               <div className="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                 Mọi người
               </div>
@@ -181,66 +181,78 @@ export const Topbar: React.FC<TopbarProps> = ({
         <button
           onClick={() => onSelectTab('feed')}
           title="Bảng tin"
-          className={`h-full px-7 flex items-center justify-center border-b-2 transition-all ${
+          className={`h-full px-6 sm:px-7 flex items-center justify-center relative transition-all press-tactile ${
             activeTab === 'feed'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-lg my-1'
+              ? 'text-blue-600 dark:text-blue-400 font-bold'
+              : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/60 dark:hover:bg-white/5 rounded-xl my-1'
           }`}
         >
-          <Home className="w-6 h-6" />
+          <Home className="w-5 h-5 sm:w-6 sm:h-6" />
+          {activeTab === 'feed' && (
+            <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+          )}
         </button>
 
         <button
           onClick={() => onSelectTab('friends')}
           title="Bạn bè"
-          className={`h-full px-7 flex items-center justify-center border-b-2 transition-all ${
+          className={`h-full px-6 sm:px-7 flex items-center justify-center relative transition-all press-tactile ${
             activeTab === 'friends'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-lg my-1'
+              ? 'text-blue-600 dark:text-blue-400 font-bold'
+              : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/60 dark:hover:bg-white/5 rounded-xl my-1'
           }`}
         >
-          <Users className="w-6 h-6" />
+          <Users className="w-5 h-5 sm:w-6 sm:h-6" />
+          {activeTab === 'friends' && (
+            <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+          )}
         </button>
 
         <button
           onClick={() => onSelectTab('messenger')}
           title="Messenger Toàn màn hình"
-          className={`h-full px-7 flex items-center justify-center border-b-2 transition-all ${
+          className={`h-full px-6 sm:px-7 flex items-center justify-center relative transition-all press-tactile ${
             activeTab === 'messenger'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-lg my-1'
+              ? 'text-blue-600 dark:text-blue-400 font-bold'
+              : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/60 dark:hover:bg-white/5 rounded-xl my-1'
           }`}
         >
           <div className="relative">
-            <MessageCircle className="w-6 h-6" />
+            <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6" />
             {unreadMessagesCount > 0 && (
               <span className="absolute -top-1 -right-2 bg-rose-500 text-white text-[10px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center shadow-xs">
                 {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
               </span>
             )}
           </div>
+          {activeTab === 'messenger' && (
+            <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+          )}
         </button>
 
         <button
           onClick={() => onSelectTab('guestbook')}
           title="Sổ Lưu Bút Portfolio"
-          className={`h-full px-7 flex items-center justify-center border-b-2 transition-all ${
+          className={`h-full px-6 sm:px-7 flex items-center justify-center relative transition-all press-tactile ${
             activeTab === 'guestbook'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-lg my-1'
+              ? 'text-blue-600 dark:text-blue-400 font-bold'
+              : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/60 dark:hover:bg-white/5 rounded-xl my-1'
           }`}
         >
-          <BookOpen className="w-6 h-6" />
+          <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
+          {activeTab === 'guestbook' && (
+            <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+          )}
         </button>
       </nav>
 
       {/* Right: Actions, Notifications & Profile */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         {/* Theme Toggle Button */}
         <button
           onClick={onToggleTheme}
           title={isDark ? 'Chuyển giao diện sáng' : 'Chuyển giao diện tối'}
-          className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+          className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200/80 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 flex items-center justify-center transition-colors press-tactile cursor-pointer"
         >
           {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
         </button>
@@ -252,7 +264,7 @@ export const Topbar: React.FC<TopbarProps> = ({
               <button
                 onClick={handleToggleMessenger}
                 title="Messenger"
-                className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors relative cursor-pointer"
+                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200/80 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 flex items-center justify-center transition-colors relative press-tactile cursor-pointer"
               >
                 <MessageCircle className="w-4 h-4" />
                 {unreadMessagesCount > 0 && (
@@ -264,8 +276,8 @@ export const Topbar: React.FC<TopbarProps> = ({
 
               {/* Messenger Dropdown */}
               {showMessengerDropdown && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 py-3 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-4 pb-2 border-b border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200/80 dark:border-white/10 py-3 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-4 pb-2 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
                     <h3 className="font-bold text-base text-slate-800 dark:text-slate-100">Đoạn chat</h3>
                     <button
                       onClick={() => {
@@ -278,7 +290,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                     </button>
                   </div>
 
-                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700/40">
+                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
                     {conversations.length === 0 ? (
                       <div className="p-6 text-center text-sm text-slate-400">
                         Chưa có cuộc trò chuyện nào. Hãy bắt đầu nhắn tin với bạn bè!
@@ -291,7 +303,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                             setShowMessengerDropdown(false);
                             onSelectTab('messenger');
                           }}
-                          className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer flex items-center gap-3 transition-colors"
+                          className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer flex items-center gap-3 transition-colors press-tactile"
                         >
                           <img
                             src={conv.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${conv.id}`}
@@ -327,7 +339,7 @@ export const Topbar: React.FC<TopbarProps> = ({
               <button
                 onClick={handleToggleNotifs}
                 title="Thông báo"
-                className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors relative cursor-pointer"
+                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200/80 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 flex items-center justify-center transition-colors relative press-tactile cursor-pointer"
               >
                 <Bell className="w-4 h-4" />
                 {unreadNotifsCount > 0 && (
@@ -339,8 +351,8 @@ export const Topbar: React.FC<TopbarProps> = ({
 
               {/* Notifications Dropdown */}
               {showNotifDropdown && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 py-3 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-4 pb-2 border-b border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200/80 dark:border-white/10 py-3 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-4 pb-2 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
                     <h3 className="font-bold text-base text-slate-800 dark:text-slate-100">Thông báo</h3>
                     <button
                       onClick={async () => {
@@ -353,7 +365,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                     </button>
                   </div>
 
-                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700/40">
+                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
                     {notifications.length === 0 ? (
                       <div className="p-6 text-center text-sm text-slate-400">
                         Bạn không có thông báo mới nào.
@@ -374,7 +386,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                               setShowNotifDropdown(false);
                             }
                           }}
-                          className={`px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer flex items-center gap-3 transition-colors ${
+                          className={`px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer flex items-center gap-3 transition-colors press-tactile ${
                             !notif.is_read ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
                           }`}
                         >
@@ -409,7 +421,7 @@ export const Topbar: React.FC<TopbarProps> = ({
             <div ref={userRef} className="relative">
               <button
                 onClick={() => setShowUserDropdown((prev) => !prev)}
-                className="w-9 h-9 rounded-full overflow-hidden border-2 border-transparent hover:border-blue-500 transition-all cursor-pointer"
+                className="w-9 h-9 rounded-full overflow-hidden border-2 border-transparent hover:border-blue-500 focus:border-blue-500 transition-all press-tactile cursor-pointer"
               >
                 <img
                   src={
@@ -422,7 +434,7 @@ export const Topbar: React.FC<TopbarProps> = ({
               </button>
 
               {showUserDropdown && (
-                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-64 max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200/80 dark:border-white/10 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                   <div
                     onClick={() => {
                       setShowUserDropdown(false);

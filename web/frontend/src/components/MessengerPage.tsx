@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Search, Plus, Send, Image as ImageIcon, Smile,
   Phone, Video, Info, MoreVertical, Undo2, Loader2,
-  Users as UsersIcon, Check, CheckCheck
+  Users as UsersIcon, Check, CheckCheck, ArrowLeft
 } from 'lucide-react';
 import { Conversation, ChatMessage } from '../types/social';
 import { User } from '../types/auth';
@@ -207,15 +207,17 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
   }
 
   return (
-    <div className="flex-1 flex h-[calc(100vh-3.5rem)] overflow-hidden bg-white dark:bg-slate-900 border-x border-slate-200 dark:border-slate-800">
+    <div className="flex-1 flex h-[calc(100vh-3.5rem)] overflow-hidden bg-white dark:bg-[#090B10] border-x border-slate-200/80 dark:border-white/10">
       {/* 1. Left Column: Conversations List */}
-      <div className="w-80 sm:w-96 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0">
-        <div className="p-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Đoạn chat</h2>
+      <div className={`border-r border-slate-200/80 dark:border-white/10 flex flex-col shrink-0 transition-all ${
+        activeConvId ? 'hidden md:flex w-80 lg:w-96' : 'w-full md:w-80 lg:w-96 flex'
+      }`}>
+        <div className="p-3.5 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
+          <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Đoạn chat</h2>
           <button
             onClick={() => setShowNewGroupModal(true)}
             title="Tạo nhóm mới"
-            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-200 flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 flex items-center justify-center transition-colors press-tactile cursor-pointer"
           >
             <Plus className="w-4 h-4" />
           </button>
@@ -223,7 +225,7 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
 
         {/* Search */}
         <div className="p-3">
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full px-3 py-1.5 border border-transparent focus-within:border-blue-500 transition-all">
+          <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-full px-3 py-1.5 border border-transparent focus-within:border-blue-500 transition-all">
             <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
             <input
               type="text"
@@ -236,7 +238,7 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
         </div>
 
         {/* List */}
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
+        <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
           {filteredConversations.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-400">
               Không tìm thấy đoạn chat nào.
@@ -251,10 +253,10 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
                     setActiveConvId(conv.id);
                     onSelectConversation(conv.id);
                   }}
-                  className={`p-3 flex items-center gap-3 cursor-pointer transition-colors ${
+                  className={`p-3 flex items-center gap-3 cursor-pointer transition-colors press-tactile ${
                     isSelected
-                      ? 'bg-blue-50/80 dark:bg-blue-950/40 border-l-4 border-blue-600'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                      ? 'bg-blue-50/90 dark:bg-blue-950/40 border-l-4 border-blue-600'
+                      : 'hover:bg-slate-50 dark:hover:bg-white/5'
                   }`}
                 >
                   <div className="relative shrink-0">
@@ -264,13 +266,13 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
                         `https://api.dicebear.com/7.x/identicon/svg?seed=${conv.id}`
                       }
                       alt={conv.title || 'Chat'}
-                      className="w-12 h-12 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                      className="w-12 h-12 rounded-full object-cover border border-slate-200 dark:border-white/10"
                     />
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900" />
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 shadow-xs" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate">
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">
                         {conv.title || 'Cuộc trò chuyện'}
                       </h4>
                       <span className="text-[11px] text-slate-400 shrink-0">
@@ -292,25 +294,36 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
       </div>
 
       {/* 2. Middle Column: Active Chat Window */}
-      <div className="flex-1 flex flex-col bg-white dark:bg-slate-950 min-w-0">
+      <div className={`flex-1 flex flex-col bg-white dark:bg-[#090B10] min-w-0 ${
+        activeConvId ? 'flex' : 'hidden md:flex'
+      }`}>
         {activeConversation ? (
           <>
             {/* Chat Header */}
-            <div className="h-14 px-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="relative">
+            <div className="h-14 px-3 sm:px-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/90 dark:bg-[#090B10]/90 backdrop-blur-md">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                {/* Mobile Back Button to list */}
+                <button
+                  onClick={() => setActiveConvId(null)}
+                  className="md:hidden w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 press-tactile"
+                  title="Quay lại danh sách"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+
+                <div className="relative shrink-0">
                   <img
                     src={
                       activeConversation.avatar_url ||
                       `https://api.dicebear.com/7.x/identicon/svg?seed=${activeConversation.id}`
                     }
                     alt={activeConversation.title || 'Chat'}
-                    className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-slate-200 dark:border-white/10"
                   />
                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate">
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
                     {activeConversation.title || 'Cuộc trò chuyện'}
                   </h3>
                   <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
@@ -323,21 +336,21 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
                 <button
                   onClick={() => alert('Đang kết nối cuộc gọi thoại...')}
                   title="Bắt đầu gọi thoại"
-                  className="w-9 h-9 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center transition-colors press-tactile cursor-pointer"
                 >
                   <Phone className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => alert('Đang kết nối video call...')}
                   title="Bắt đầu gọi video"
-                  className="w-9 h-9 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center transition-colors press-tactile cursor-pointer"
                 >
                   <Video className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setShowDetails((prev) => !prev)}
                   title="Thông tin đoạn chat"
-                  className="w-9 h-9 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer text-slate-500"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center transition-colors press-tactile cursor-pointer text-slate-500"
                 >
                   <Info className="w-4 h-4" />
                 </button>

@@ -10,6 +10,7 @@ import { MessengerPage } from './components/MessengerPage';
 import { FriendsTab } from './components/FriendsTab';
 import ProfilePage from './components/ProfilePage';
 import { AuthModal } from './components/AuthModal';
+import { MobileBottomNav } from './components/MobileBottomNav';
 
 // Keep legacy portfolio guestbook components for the "Lưu bút" tab
 import { Sidebar } from './components/Sidebar';
@@ -286,7 +287,7 @@ export const App: React.FC = () => {
       />
 
       {/* 2. Main Page Content */}
-      <div className="flex-1 flex justify-center w-full">
+      <div className="flex-1 flex justify-center w-full pb-20 md:pb-6">
         {/* TAB 1: BẢNG TIN (SOCIAL FEED) */}
         {activeTab === 'feed' && (
           <div className="flex justify-between w-full max-w-7xl">
@@ -478,6 +479,27 @@ export const App: React.FC = () => {
           }}
         />
       )}
+
+      {/* 6. Mobile Bottom Floating Navigation Bar (Mobile only) */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        onSelectTab={(tab) => {
+          if (tab === 'profile') setSelectedProfileId(currentUser?.id || null);
+          setActiveTab(tab);
+        }}
+        currentUser={currentUser}
+        unreadMessagesCount={unreadMessagesCount}
+        unreadNotifsCount={unreadNotifsCount}
+        onQuickPost={() => {
+          if (!currentUser) {
+            handleOpenAuth('login');
+          } else {
+            setActiveTab('feed');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }}
+        onOpenAuth={handleOpenAuth}
+      />
     </div>
   );
 };

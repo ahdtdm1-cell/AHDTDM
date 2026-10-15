@@ -20,7 +20,7 @@ export const ReactionPicker: React.FC<ReactionPickerProps> = ({ onSelectReaction
   return (
     <div
       onMouseLeave={onClose}
-      className="absolute bottom-full left-0 mb-1.5 flex items-center gap-1 bg-white dark:bg-slate-800 rounded-full px-2 py-1.5 shadow-2xl border border-slate-100 dark:border-slate-700 z-30 animate-in fade-in slide-in-from-bottom-2 duration-150"
+      className="absolute bottom-full left-0 mb-2 flex items-center gap-1.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-full px-2.5 py-1.5 shadow-2xl border border-slate-200/80 dark:border-white/10 z-30 animate-in fade-in slide-in-from-bottom-2 duration-150"
     >
       {REACTIONS.map((r) => (
         <button
@@ -30,11 +30,11 @@ export const ReactionPicker: React.FC<ReactionPickerProps> = ({ onSelectReaction
             onSelectReaction(r.type);
             onClose();
           }}
-          className="relative group p-1 hover:scale-135 transition-transform duration-150 rounded-full cursor-pointer focus:outline-hidden"
+          className="relative group p-1 transition-all duration-150 rounded-full cursor-pointer hover:scale-135 active:scale-110 focus:outline-hidden"
           title={r.label}
         >
-          <span className="text-2xl select-none">{r.emoji}</span>
-          <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] font-semibold py-0.5 px-2 rounded-full whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+          <span className="text-2xl select-none inline-block filter drop-shadow-xs">{r.emoji}</span>
+          <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900/90 dark:bg-white/90 text-white dark:text-slate-900 text-[10px] font-bold py-0.5 px-2 rounded-full whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-sm">
             {r.label}
           </span>
         </button>
