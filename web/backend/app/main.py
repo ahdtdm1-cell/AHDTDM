@@ -132,3 +132,73 @@ for prefix in [settings.API_PREFIX, f"{settings.API_PREFIX}/v1"]:
     app.include_router(users.router, prefix=prefix)
     app.include_router(crypto_router, prefix=prefix)
     app.include_router(captcha_router, prefix=prefix)
+
+# Realtime WebSocket Gateway for Messenger & Notifications
+from fastapi import WebSocket, WebSocketDisconnect
+from typing import Optional
+from app.websocket_manager import manager
+
+@app.websocket("/api/ws")
+@app.websocket("/ws")
+async def websocket_gateway(websocket: WebSocket, token: Optional[str] = None):
+    # Retrieve token from query or cookie
+    if not token:
+        token = websocket.cookies.get("access_token")
+    
+    user_id = None
+    username = None
+    if token:
+        try:
+            from app.security import SECRET_KEY, ALGORITHM
+            import jwt
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("user_id")
+            username = payload.get("sub")
+        except Exception as e:
+            logger.warning(f"WebSocket auth failed: {e}")
+
+    if not user_id:
+        await websocket.close(code=1008)
+        return
+
+    await manager.connect(user_id, websocket)
+
+    try:
+        await websocket.send_json({
+            "type": "connected",
+            "user_id": user_id,
+            "username": username,
+            "online_users": manager.get_online_user_ids()
+        })
+        await manager.broadcast_presence(user_id, True, exclude_user_id=user_id)
+
+        while True:
+            data = await websocket.receive_json()
+            event_type = data.get("type")
+            if event_type == "ping":
+                await websocket.send_json({"type": "pong"})
+            elif event_type == "typing_indicator":
+                participant_ids = data.get("participant_ids", [])
+                await manager.broadcast_to_users(participant_ids, {
+                    "type": "typing_indicator",
+                    "conversation_id": data.get("conversation_id"),
+                    "user_id": user_id,
+                    "is_typing": data.get("is_typing", False)
+                })
+            elif event_type == "message_seen":
+                participant_ids = data.get("participant_ids", [])
+                await manager.broadcast_to_users(participant_ids, {
+                    "type": "message_seen",
+                    "conversation_id": data.get("conversation_id"),
+                    "user_id": user_id,
+                    "message_id": data.get("message_id")
+                })
+    except WebSocketDisconnect:
+        manager.disconnect(user_id, websocket)
+        if not manager.is_user_online(user_id):
+            await manager.broadcast_presence(user_id, False)
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        manager.disconnect(user_id, websocket)
+        if not manager.is_user_online(user_id):
+            await manager.broadcast_presence(user_id, False)
