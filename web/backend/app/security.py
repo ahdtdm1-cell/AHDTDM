@@ -10,9 +10,7 @@ from app.database import get_db
 from app.models import User
 
 # JWT Configuration
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-if not SECRET_KEY:
-    raise ValueError("Lỗi bảo mật: Môi trường chưa cấu hình JWT_SECRET_KEY. Vui lòng thiết lập biến môi trường này.")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "fallback_dev_secret_key_ahdtdm_2026_super_secure_salt_replace_in_prod")
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
