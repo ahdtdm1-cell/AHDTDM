@@ -49,7 +49,7 @@ services:
     hostname: chat
     restart: always
     environment:
-      - TS_AUTHKEY=tskey-auth-kMvFmVxPpg11CNTRL-dWkCF7p8tLFLXHhgSqzsKFc5bp7aHEYf
+      - TS_AUTHKEY=tskey-auth-kjKszunAsX11CNTRL-t6oWUaG1PLE4AUAuE9SNLEULzEgSNWcc
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_TARGET_HOST=frontend
       - TS_TARGET_PORT=8080
@@ -73,7 +73,7 @@ services:
     extra_hosts:
       - "backend:192.168.100.185"
     environment:
-      - TS_AUTHKEY=tskey-auth-kMvFmVxPpg11CNTRL-dWkCF7p8tLFLXHhgSqzsKFc5bp7aHEYf
+      - TS_AUTHKEY=tskey-auth-kjKszunAsX11CNTRL-t6oWUaG1PLE4AUAuE9SNLEULzEgSNWcc
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_TARGET_HOST=backend
       - TS_TARGET_PORT=7000
