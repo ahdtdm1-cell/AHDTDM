@@ -207,9 +207,9 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
   }
 
   return (
-    <div className="flex-1 flex h-[calc(100vh-3.5rem)] overflow-hidden bg-white dark:bg-[#090B10] border-x border-slate-200/80 dark:border-white/10">
+    <div className="flex-1 flex h-[calc(100vh-3.5rem)] overflow-hidden bg-white dark:bg-slate-950 border-x border-slate-200/80 dark:border-white/10">
       {/* 1. Left Column: Conversations List */}
-      <div className={`border-r border-slate-200/80 dark:border-white/10 flex flex-col shrink-0 transition-all ${
+      <div className={`border-r border-slate-200/80 dark:border-white/10 flex flex-col shrink-0 transition-colors duration-150 ${
         activeConvId ? 'hidden md:flex w-80 lg:w-96' : 'w-full md:w-80 lg:w-96 flex'
       }`}>
         <div className="p-3.5 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
@@ -225,7 +225,7 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
 
         {/* Search */}
         <div className="p-3">
-          <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-full px-3 py-1.5 border border-transparent focus-within:border-blue-500 transition-all">
+          <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-full px-3 py-1.5 border border-transparent focus-within:border-blue-500 transition-colors duration-150">
             <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
             <input
               type="text"
@@ -294,13 +294,13 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
       </div>
 
       {/* 2. Middle Column: Active Chat Window */}
-      <div className={`flex-1 flex flex-col bg-white dark:bg-[#090B10] min-w-0 ${
+      <div className={`flex-1 flex flex-col bg-white dark:bg-slate-950 min-w-0 ${
         activeConvId ? 'flex' : 'hidden md:flex'
       }`}>
         {activeConversation ? (
           <>
             {/* Chat Header */}
-            <div className="h-14 px-3 sm:px-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/90 dark:bg-[#090B10]/90 backdrop-blur-md">
+            <div className="h-14 px-3 sm:px-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 {/* Mobile Back Button to list */}
                 <button
@@ -488,7 +488,7 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
                 placeholder="Nhập tin nhắn..."
                 value={inputText}
                 onChange={handleInputChange}
-                className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-hidden border border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
+                className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-hidden border border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-colors duration-150"
               />
 
               <button

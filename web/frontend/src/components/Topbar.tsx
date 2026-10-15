@@ -126,7 +126,7 @@ export const Topbar: React.FC<TopbarProps> = ({
 
         {/* Search bar */}
         <div ref={searchRef} className="relative ml-1 sm:ml-2">
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800/70 hover:bg-slate-200/70 dark:hover:bg-slate-800 rounded-full px-3 py-1.5 w-36 xs:w-44 sm:w-56 md:w-64 border border-transparent focus-within:border-blue-500 focus-within:bg-white dark:focus-within:bg-slate-950 transition-all">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800/70 hover:bg-slate-200/70 dark:hover:bg-slate-800 rounded-full px-3 py-1.5 w-36 xs:w-44 sm:w-56 md:w-64 border border-transparent focus-within:border-blue-500 focus-within:bg-white dark:focus-within:bg-slate-950 transition-colors duration-150">
             <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
             <input
               type="text"
@@ -181,7 +181,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         <button
           onClick={() => onSelectTab('feed')}
           title="Bảng tin"
-          className={`h-full px-6 sm:px-7 flex items-center justify-center relative transition-all press-tactile ${
+          className={`h-full px-6 sm:px-7 flex items-center justify-center relative transition-colors duration-150 press-tactile ${
             activeTab === 'feed'
               ? 'text-blue-600 dark:text-blue-400 font-bold'
               : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/60 dark:hover:bg-white/5 rounded-xl my-1'
@@ -196,7 +196,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         <button
           onClick={() => onSelectTab('friends')}
           title="Bạn bè"
-          className={`h-full px-6 sm:px-7 flex items-center justify-center relative transition-all press-tactile ${
+          className={`h-full px-6 sm:px-7 flex items-center justify-center relative transition-colors duration-150 press-tactile ${
             activeTab === 'friends'
               ? 'text-blue-600 dark:text-blue-400 font-bold'
               : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/60 dark:hover:bg-white/5 rounded-xl my-1'
@@ -211,7 +211,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         <button
           onClick={() => onSelectTab('messenger')}
           title="Messenger Toàn màn hình"
-          className={`h-full px-6 sm:px-7 flex items-center justify-center relative transition-all press-tactile ${
+          className={`h-full px-6 sm:px-7 flex items-center justify-center relative transition-colors duration-150 press-tactile ${
             activeTab === 'messenger'
               ? 'text-blue-600 dark:text-blue-400 font-bold'
               : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/60 dark:hover:bg-white/5 rounded-xl my-1'
@@ -233,7 +233,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         <button
           onClick={() => onSelectTab('guestbook')}
           title="Sổ Lưu Bút Portfolio"
-          className={`h-full px-6 sm:px-7 flex items-center justify-center relative transition-all press-tactile ${
+          className={`h-full px-6 sm:px-7 flex items-center justify-center relative transition-colors duration-150 press-tactile ${
             activeTab === 'guestbook'
               ? 'text-blue-600 dark:text-blue-400 font-bold'
               : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/60 dark:hover:bg-white/5 rounded-xl my-1'
@@ -421,7 +421,7 @@ export const Topbar: React.FC<TopbarProps> = ({
             <div ref={userRef} className="relative">
               <button
                 onClick={() => setShowUserDropdown((prev) => !prev)}
-                className="w-9 h-9 rounded-full overflow-hidden border-2 border-transparent hover:border-blue-500 focus:border-blue-500 transition-all press-tactile cursor-pointer"
+                className="w-9 h-9 rounded-full overflow-hidden border-2 border-transparent hover:border-blue-500 focus:border-blue-500 transition-colors duration-150 press-tactile cursor-pointer"
               >
                 <img
                   src={

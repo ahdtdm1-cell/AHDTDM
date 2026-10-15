@@ -111,7 +111,7 @@ export const EditMessageModal: React.FC<EditMessageModalProps> = ({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Chỉnh sửa nội dung cho phù hợp quy chuẩn cộng đồng..."
-              className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all resize-none"
+              className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors duration-150 resize-none"
             />
             <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400 mt-1">
               <span>* Chỉnh sửa này sẽ gắn nhãn "(Đã chỉnh sửa bởi Admin)"</span>
@@ -123,14 +123,14 @@ export const EditMessageModal: React.FC<EditMessageModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-white/5 transition-all"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-white/5 transition-colors duration-150 press-tactile cursor-pointer"
             >
               Hủy bỏ
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-amber-600 hover:bg-amber-500 shadow-md shadow-amber-600/20 flex items-center gap-1.5 transition-all disabled:opacity-50"
+              className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-amber-600 hover:bg-amber-500 shadow-md shadow-amber-600/20 flex items-center gap-1.5 transition-colors duration-150 press-tactile cursor-pointer disabled:opacity-50"
             >
               {loading ? (
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

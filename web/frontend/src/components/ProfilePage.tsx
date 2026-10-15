@@ -155,11 +155,11 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
   if (error || !profile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] p-4 text-center">
-        <div className="p-6 bg-white dark:bg-[#0B0F17] rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-lg max-w-sm w-full">
+        <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-lg max-w-sm w-full">
           <p className="text-rose-500 font-semibold text-sm mb-4">{error || 'Không có dữ liệu hồ sơ'}</p>
           <button
             onClick={onBack}
-            className="w-full py-2 px-4 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold press-tactile transition-all"
+            className="w-full py-2 px-4 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold press-tactile transition-colors duration-150"
           >
             Quay lại
           </button>
@@ -184,7 +184,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
       <div className="sticky top-0 z-20 apple-glass-nav border-b border-slate-200/80 dark:border-white/10 px-4 py-3 flex items-center justify-between">
         <button 
           onClick={onBack}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/80 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 transition-all press-tactile cursor-pointer"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/80 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 transition-colors duration-150 press-tactile cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span className="font-semibold text-xs tracking-tight">Quay lại Bảng tin</span>
@@ -193,7 +193,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
         {isOwner && (
           <button 
             onClick={() => setIsChangingPassword(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100/80 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 transition-all press-tactile text-xs font-semibold cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100/80 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 transition-colors duration-150 press-tactile text-xs font-semibold cursor-pointer"
           >
             <Key className="w-3.5 h-3.5" />
             <span>Đổi mật khẩu</span>
@@ -212,7 +212,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
               <input type="file" ref={coverInputRef} className="hidden" accept="image/*" onChange={handleCoverUpload} />
               <button 
                 onClick={() => coverInputRef.current?.click()}
-                className="absolute top-4 right-4 bg-black/60 hover:bg-black/80 text-white p-2.5 rounded-full opacity-90 sm:opacity-0 group-hover:opacity-100 transition-all press-tactile cursor-pointer shadow-md backdrop-blur-md"
+                className="absolute top-4 right-4 bg-black/60 hover:bg-black/80 text-white p-2.5 rounded-full opacity-90 sm:opacity-0 group-hover:opacity-100 transition-colors duration-150 press-tactile cursor-pointer shadow-md backdrop-blur-md"
                 title="Thay đổi ảnh bìa"
               >
                 <Camera className="w-4 h-4" />
@@ -222,7 +222,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
 
           {/* Avatar Area overlapping bottom edge */}
           <div className="absolute -bottom-12 sm:-bottom-16 left-6 sm:left-10 z-10 group/avatar">
-            <div className="w-24 h-24 sm:w-36 sm:h-36 rounded-full overflow-hidden ring-4 ring-white dark:ring-[#090B10] bg-slate-100 dark:bg-slate-800 flex items-center justify-center shadow-xl relative">
+            <div className="w-24 h-24 sm:w-36 sm:h-36 rounded-full overflow-hidden ring-4 ring-white dark:ring-slate-950 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shadow-xl relative">
               {profile.avatar_url ? (
                 <img
                   src={profile.avatar_url}
@@ -261,7 +261,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
                 {isOwner ? (
                   <button 
                     onClick={() => setIsEditingInfo(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-800 dark:text-slate-200 rounded-xl transition-all font-semibold text-xs press-tactile cursor-pointer self-start sm:self-auto border border-slate-200/60 dark:border-white/5"
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-800 dark:text-slate-200 rounded-xl transition-colors duration-150 font-semibold text-xs press-tactile cursor-pointer self-start sm:self-auto border border-slate-200/60 dark:border-white/5"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     Chỉnh sửa thông tin
@@ -271,7 +271,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
                     {onOpenDirectChat && (
                       <button
                         onClick={() => onOpenDirectChat(profile.id, displayName, profile.avatar_url || undefined)}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all font-semibold text-xs shadow-xs press-tactile cursor-pointer"
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-colors duration-150 font-semibold text-xs shadow-xs press-tactile cursor-pointer"
                       >
                         <MessageCircle className="w-3.5 h-3.5" />
                         Nhắn tin
@@ -288,7 +288,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
                         }
                       }}
                       disabled={friendReqSent}
-                      className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-800 dark:text-slate-200 rounded-xl transition-all font-semibold text-xs cursor-pointer disabled:opacity-50 press-tactile border border-slate-200/60 dark:border-white/5"
+                      className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-800 dark:text-slate-200 rounded-xl transition-colors duration-150 font-semibold text-xs cursor-pointer disabled:opacity-50 press-tactile border border-slate-200/60 dark:border-white/5"
                     >
                       <UserPlus className="w-3.5 h-3.5" />
                       {friendReqSent ? 'Đã gửi lời mời' : 'Kết bạn'}
@@ -327,7 +327,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
               </div>
             </>
           ) : (
-            <div className="bg-white dark:bg-[#0B0F17] rounded-3xl border border-slate-200/80 dark:border-white/10 p-6 max-w-2xl shadow-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-white/10 p-6 max-w-2xl shadow-sm">
               <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4">Cập nhật thông tin</h3>
               <div className="space-y-4 text-xs text-slate-700 dark:text-slate-300">
                 <div>
@@ -366,10 +366,10 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
                   />
                 </div>
                 <div className="flex gap-2.5 pt-3">
-                  <button onClick={handleSaveInfo} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl font-semibold flex items-center gap-1.5 press-tactile transition-all shadow-xs cursor-pointer">
+                  <button onClick={handleSaveInfo} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl font-semibold flex items-center gap-1.5 press-tactile transition-colors duration-150 shadow-xs cursor-pointer">
                     <Check className="w-3.5 h-3.5"/> Lưu thay đổi
                   </button>
-                  <button onClick={() => setIsEditingInfo(false)} className="bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl font-semibold press-tactile transition-all cursor-pointer">
+                  <button onClick={() => setIsEditingInfo(false)} className="bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl font-semibold press-tactile transition-colors duration-150 cursor-pointer">
                     Hủy
                   </button>
                 </div>
@@ -381,7 +381,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
           <div className="flex items-center gap-2 mt-8 p-1 bg-slate-200/60 dark:bg-white/5 rounded-2xl w-fit border border-slate-300/40 dark:border-white/5">
             <button
               onClick={() => setActiveProfileTab('posts')}
-              className={`px-4 py-1.5 font-semibold text-xs rounded-xl transition-all cursor-pointer press-tactile ${
+              className={`px-4 py-1.5 font-semibold text-xs rounded-xl transition-colors duration-150 cursor-pointer press-tactile ${
                 activeProfileTab === 'posts'
                   ? 'bg-white dark:bg-white/15 text-slate-900 dark:text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -391,7 +391,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
             </button>
             <button
               onClick={() => setActiveProfileTab('friends')}
-              className={`px-4 py-1.5 font-semibold text-xs rounded-xl transition-all cursor-pointer press-tactile ${
+              className={`px-4 py-1.5 font-semibold text-xs rounded-xl transition-colors duration-150 cursor-pointer press-tactile ${
                 activeProfileTab === 'friends'
                   ? 'bg-white dark:bg-white/15 text-slate-900 dark:text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -406,7 +406,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
             {activeProfileTab === 'posts' ? (
               <div className="flex flex-col gap-4 max-w-2xl">
                 {userPosts.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-400 bg-white dark:bg-[#0B0F17] rounded-3xl border border-slate-200/80 dark:border-white/10">
+                  <div className="p-8 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-white/10">
                     Chưa có bài viết nào được đăng.
                   </div>
                 ) : (
@@ -426,14 +426,14 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {userFriends.length === 0 ? (
-                  <div className="col-span-full p-8 text-center text-xs text-slate-400 bg-white dark:bg-[#0B0F17] rounded-3xl border border-slate-200/80 dark:border-white/10">
+                  <div className="col-span-full p-8 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-white/10">
                     Chưa có bạn bè nào.
                   </div>
                 ) : (
                   userFriends.map((f) => (
                     <div
                       key={f.id}
-                      className="p-3 bg-white dark:bg-[#0B0F17] rounded-2xl border border-slate-200/80 dark:border-white/10 flex items-center gap-3 shadow-xs hover:shadow-md transition-all"
+                      className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-white/10 flex items-center gap-3 shadow-xs hover:shadow-md transition-shadow duration-150"
                     >
                       <img
                         src={f.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${f.username}`}
@@ -458,7 +458,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
       {/* Change Password Modal */}
       {isChangingPassword && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#0B0F17] border border-slate-200/80 dark:border-white/10 rounded-3xl max-w-md w-full shadow-2xl overflow-hidden relative">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-3xl max-w-md w-full shadow-2xl overflow-hidden relative">
             <button onClick={() => setIsChangingPassword(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer press-tactile">
               <X className="w-5 h-5"/>
             </button>
@@ -480,7 +480,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
                 </div>
                 <div className="pt-3 flex justify-end gap-2.5">
                   <button type="button" onClick={() => setIsChangingPassword(false)} className="px-4 py-2 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-semibold press-tactile cursor-pointer">Hủy</button>
-                  <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl press-tactile transition-all shadow-xs cursor-pointer">Cập nhật mật khẩu</button>
+                  <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl press-tactile transition-colors duration-150 shadow-xs cursor-pointer">Cập nhật mật khẩu</button>
                 </div>
               </form>
             </div>

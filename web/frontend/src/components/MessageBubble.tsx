@@ -95,7 +95,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     >
       {/* Avatar */}
       <div 
-        className={`flex-shrink-0 mb-0.5 ${message.user_id ? 'cursor-pointer hover:ring-2 hover:ring-indigo-500/50 rounded-xl transition-all' : ''}`}
+        className={`flex-shrink-0 mb-0.5 ${message.user_id ? 'cursor-pointer hover:ring-2 hover:ring-indigo-500/50 rounded-xl transition-shadow duration-150' : ''}`}
         onClick={() => {
           if (message.user_id && onViewProfile) {
             onViewProfile(message.user_id);
@@ -127,7 +127,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         </div>
 
         <div
-          className={`relative p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed backdrop-blur-md transition-all ${
+          className={`relative p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed backdrop-blur-md transition-colors duration-150 ${
             isSelf
               ? 'user-bubble-gradient text-white rounded-br-xs border border-indigo-400/20'
               : 'bg-zinc-900/90 light:bg-white text-zinc-200 light:text-slate-800 border border-zinc-800/90 light:border-slate-200/90 rounded-bl-xs shadow-lg light:shadow-sm shadow-black/20'
@@ -168,7 +168,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               {onLike && (
                 <button
                   onClick={() => onLike(message.id as number)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 light:bg-slate-100 hover:bg-white/20 light:hover:bg-slate-200 transition-all text-xs font-medium text-white light:text-slate-700 cursor-pointer active:scale-95 shadow-sm"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 light:bg-slate-100 hover:bg-white/20 light:hover:bg-slate-200 transition-colors duration-150 text-xs font-medium text-white light:text-slate-700 cursor-pointer press-tactile shadow-sm"
                 >
                   <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
                   <span className="font-mono tabular-nums">{message.likes_count}</span>
@@ -181,7 +181,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   {onEdit && (
                     <button
                       onClick={() => onEdit(message)}
-                      className="p-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition-all cursor-pointer"
+                      className="p-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition-colors duration-150 press-tactile cursor-pointer"
                       title="Sửa tin nhắn (Admin)"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
@@ -190,7 +190,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   {onDelete && (
                     <button
                       onClick={() => onDelete(message.id as number)}
-                      className="p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 transition-all cursor-pointer"
+                      className="p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 transition-colors duration-150 press-tactile cursor-pointer"
                       title="Xóa tin nhắn (Admin)"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

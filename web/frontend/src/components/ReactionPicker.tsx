@@ -30,7 +30,7 @@ export const ReactionPicker: React.FC<ReactionPickerProps> = ({ onSelectReaction
             onSelectReaction(r.type);
             onClose();
           }}
-          className="relative group p-1 transition-all duration-150 rounded-full cursor-pointer hover:scale-135 active:scale-110 focus:outline-hidden"
+          className="relative group p-1 transition-transform duration-120 ease-out rounded-full cursor-pointer hover:-translate-y-1 hover:scale-110 active:scale-95 focus-visible:ring-2 focus-visible:ring-blue-500"
           title={r.label}
         >
           <span className="text-2xl select-none inline-block filter drop-shadow-xs">{r.emoji}</span>

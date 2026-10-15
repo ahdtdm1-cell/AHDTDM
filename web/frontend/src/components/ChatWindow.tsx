@@ -116,7 +116,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <button
               onClick={onToggleTheme}
               title={theme === 'dark' ? 'Chuyển giao diện sáng' : 'Chuyển giao diện tối'}
-              className="lg:hidden p-2 rounded-xl bg-zinc-900 light:bg-slate-100 border border-zinc-800 light:border-slate-200 text-zinc-300 light:text-slate-700 hover:text-white light:hover:text-slate-900 transition-all cursor-pointer shadow-sm active:scale-95 flex items-center justify-center"
+              className="lg:hidden p-2 rounded-xl bg-zinc-900 light:bg-slate-100 border border-zinc-800 light:border-slate-200 text-zinc-300 light:text-slate-700 hover:text-white light:hover:text-slate-900 transition-colors duration-150 cursor-pointer shadow-sm press-tactile flex items-center justify-center"
             >
               {theme === 'dark' ? (
                 <Sun className="w-4 h-4 text-amber-400" />

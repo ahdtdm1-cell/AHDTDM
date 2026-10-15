@@ -20,7 +20,7 @@ const AVATAR_COLORS = [
   '#3B82F6', // Blue
 ];
 
-const EMOJI_LIST = ['���👍', '��❤��️', '���🚀', '���🔥', '���💻', '���🎉', '���👏', '��✨'];
+const EMOJI_LIST = ['👍', '❤️', '🚀', '🔥', '🎉', '👏', '✨', '💬'];
 
 export const GuestbookInput: React.FC<GuestbookInputProps> = ({
   onSendMessage,
@@ -250,14 +250,14 @@ export const GuestbookInput: React.FC<GuestbookInputProps> = ({
               placeholder="Nhập nội dung sổ lưu bút..."
               value={content}
               onChange={(e) => handleTyping(e.target.value)}
-              className="w-full pl-3.5 pr-10 py-2 rounded-xl bg-transparent text-xs sm:text-sm text-zinc-100 light:text-slate-900 placeholder-zinc-500 light:placeholder-slate-400 outline-none transition-all font-sans"
+              className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-transparent text-xs sm:text-sm text-zinc-100 light:text-slate-900 placeholder-zinc-500 light:placeholder-slate-400 outline-hidden font-sans"
               maxLength={1000}
             />
 
             <button
               type="button"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="absolute right-2 text-zinc-400 light:text-slate-400 hover:text-amber-400 light:hover:text-amber-500 transition-colors p-1"
+              className="absolute right-2 text-zinc-400 light:text-slate-400 hover:text-amber-400 light:hover:text-amber-500 transition-colors p-1.5 rounded-lg focus-visible:ring-2 focus-visible:ring-indigo-500"
               title="Thêm biểu tượng cảm xúc"
             >
               <Smile className="w-4 h-4" />
@@ -267,10 +267,10 @@ export const GuestbookInput: React.FC<GuestbookInputProps> = ({
           <button
             type="submit"
             disabled={isSubmitting || !content.trim() || (!currentUser && !authorName.trim())}
-            className="group px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-950/40 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+            className="group px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors duration-150 press-tactile shadow-xs disabled:opacity-40 disabled:pointer-events-none cursor-pointer focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 shrink-0"
           >
             <span>Gửi</span>
-            <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center group-hover:translate-x-0.5 transition-transform">
+            <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center group-hover:translate-x-0.5 transition-transform duration-150">
               <Send className="w-3 h-3 text-white" />
             </div>
           </button>

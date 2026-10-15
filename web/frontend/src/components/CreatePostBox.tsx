@@ -94,7 +94,7 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({
           />
           <button
             onClick={handleOpenModal}
-            className="flex-1 bg-slate-100 hover:bg-slate-200/70 dark:bg-white/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-normal py-2.5 px-4 rounded-full text-left transition-all press-tactile cursor-pointer"
+            className="flex-1 bg-slate-100 hover:bg-slate-200/70 dark:bg-white/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-normal py-2.5 px-4 rounded-full text-left transition-colors duration-150 press-tactile cursor-pointer"
           >
             {currentUser
               ? `${currentUser.display_name || currentUser.username} ơi, bạn đang nghĩ gì thế?`
@@ -186,7 +186,7 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({
                       <img src={url} alt="Media" className="w-full h-full object-cover" />
                       <button
                         onClick={() => handleRemoveMedia(i)}
-                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors press-bounce"
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors press-tactile"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -235,7 +235,7 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting || isUploading || (!content.trim() && mediaUrls.length === 0)}
-                className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm press-bounce cursor-pointer"
+                className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-sm rounded-xl transition-colors duration-150 flex items-center justify-center gap-2 shadow-sm press-tactile cursor-pointer"
               >
                 {isSubmitting ? (
                   <>

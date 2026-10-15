@@ -21,7 +21,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       {currentUser ? (
         <div
           onClick={() => onSelectTab('profile')}
-          className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-all press-tactile"
+          className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-colors duration-150 press-tactile"
         >
           <img
             src={
@@ -55,7 +55,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       {/* Navigation Shortcuts */}
       <button
         onClick={() => onSelectTab('feed')}
-        className={`flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all press-tactile cursor-pointer text-left ${
+        className={`flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 press-tactile cursor-pointer text-left ${
           activeTab === 'feed'
             ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold'
             : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
@@ -71,7 +71,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
       <button
         onClick={() => onSelectTab('friends')}
-        className={`flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all press-tactile cursor-pointer text-left ${
+        className={`flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 press-tactile cursor-pointer text-left ${
           activeTab === 'friends'
             ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold'
             : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
@@ -87,7 +87,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
       <button
         onClick={() => onSelectTab('messenger')}
-        className={`flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all press-tactile cursor-pointer text-left ${
+        className={`flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 press-tactile cursor-pointer text-left ${
           activeTab === 'messenger'
             ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold'
             : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
@@ -103,7 +103,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
       <button
         onClick={() => onSelectTab('guestbook')}
-        className={`flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all press-tactile cursor-pointer text-left ${
+        className={`flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 press-tactile cursor-pointer text-left ${
           activeTab === 'guestbook'
             ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold'
             : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'

@@ -232,7 +232,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           )}
           <button
             onClick={handleToggleLike}
-            className={`w-full py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center gap-2 text-xs font-bold transition-all press-tactile cursor-pointer ${
+            className={`w-full py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center gap-2 text-xs font-bold transition-colors duration-150 press-tactile cursor-pointer ${
               currentReactionObj
                 ? currentReactionObj.color
                 : 'text-slate-600 dark:text-slate-300'
@@ -255,7 +255,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         {/* Comment Button */}
         <button
           onClick={() => setShowComments((prev) => !prev)}
-          className="flex-1 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 transition-all press-tactile cursor-pointer"
+          className="flex-1 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 transition-colors duration-150 press-tactile cursor-pointer"
         >
           <MessageSquare className="w-4 h-4" />
           <span>Bình luận</span>
@@ -267,7 +267,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             navigator.clipboard.writeText(window.location.href);
             alert('Đã sao chép liên kết bài viết!');
           }}
-          className="flex-1 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 transition-all press-tactile cursor-pointer"
+          className="flex-1 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 transition-colors duration-150 press-tactile cursor-pointer"
         >
           <Share2 className="w-4 h-4" />
           <span>Chia sẻ</span>

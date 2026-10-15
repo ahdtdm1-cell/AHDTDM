@@ -144,7 +144,7 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
 
   return (
     <div
-      className={`w-80 bg-white/95 dark:bg-[#0C1017]/95 backdrop-blur-xl rounded-t-2xl shadow-2xl border border-slate-200/80 dark:border-white/10 flex flex-col overflow-hidden transition-all duration-200 ${
+      className={`w-80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-t-2xl shadow-2xl border border-slate-200/80 dark:border-white/10 flex flex-col overflow-hidden transition-[height] duration-200 ease-out ${
         chat.isMinimized ? 'h-11' : 'h-104'
       }`}
     >
@@ -160,7 +160,7 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
               alt={chat.title || chat.recipientName || 'Chat'}
               className="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-white/10"
             />
-            <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 rounded-full ring-1 ring-white dark:ring-[#0C1017]" />
+            <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 rounded-full ring-1 ring-white dark:ring-slate-900" />
           </div>
           <span className="font-semibold text-xs text-slate-800 dark:text-slate-100 truncate tracking-tight">
             {chat.title || chat.recipientName || 'Trò chuyện'}
@@ -250,7 +250,7 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
 
                         {/* Reaction badges */}
                         {m.reactions && m.reactions.length > 0 && (
-                          <div className="absolute -bottom-2 right-1 bg-white dark:bg-[#0C1017] rounded-full px-1.5 py-0.2 shadow-xs border border-slate-200 dark:border-white/10 text-[10px] flex items-center gap-0.5">
+                          <div className="absolute -bottom-2 right-1 bg-white dark:bg-slate-900 rounded-full px-1.5 py-0.2 shadow-xs border border-slate-200 dark:border-white/10 text-[10px] flex items-center gap-0.5">
                             {m.reactions.map((r) => r.emoji).join('')}
                           </div>
                         )}
@@ -308,7 +308,7 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
           {/* Input toolbar */}
           <form
             onSubmit={handleSendMessage}
-            className="p-2 border-t border-slate-100 dark:border-white/10 bg-white/90 dark:bg-[#0C1017]/90 flex items-center gap-1.5"
+            className="p-2 border-t border-slate-100 dark:border-white/10 bg-white/90 dark:bg-slate-900/90 flex items-center gap-1.5"
           >
             <input
               ref={fileInputRef}
@@ -336,13 +336,13 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
               placeholder="Aa..."
               value={inputText}
               onChange={handleInputChange}
-              className="flex-1 bg-slate-100/80 dark:bg-white/5 rounded-full px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-hidden border border-transparent focus:border-blue-500/50 focus:bg-white dark:focus:bg-[#090B10] transition-all"
+              className="flex-1 bg-slate-100/80 dark:bg-white/5 rounded-full px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-hidden border border-transparent focus:border-blue-500/50 focus:bg-white dark:focus:bg-slate-950 transition-colors duration-150"
             />
 
             <button
               type="submit"
               disabled={isSending || !inputText.trim()}
-              className="w-7 h-7 rounded-full text-white bg-blue-600 hover:bg-blue-500 flex items-center justify-center disabled:opacity-40 transition-all press-tactile cursor-pointer shrink-0 shadow-xs"
+              className="w-7 h-7 rounded-full text-white bg-blue-600 hover:bg-blue-500 flex items-center justify-center disabled:opacity-40 transition-colors duration-150 press-tactile cursor-pointer shrink-0 shadow-xs"
             >
               <Send className="w-3.5 h-3.5" />
             </button>

@@ -58,7 +58,7 @@ export const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({
           {[1, 2, 3, 4, 5].map((level) => (
             <div
               key={level}
-              className={`h-full rounded-full transition-all duration-300 ${
+              className={`h-full rounded-full transition-colors duration-200 ${
                 level <= metCount && password.length > 0
                   ? strengthColor
                   : 'bg-slate-700/60'

@@ -29,7 +29,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         {/* Feed Tab */}
         <button
           onClick={() => onSelectTab('feed')}
-          className={`flex flex-col items-center justify-center relative w-12 h-11 rounded-xl transition-all press-tactile ${
+          className={`flex flex-col items-center justify-center relative w-12 h-11 rounded-xl transition-colors duration-150 press-tactile ${
             activeTab === 'feed'
               ? 'text-blue-600 dark:text-blue-400 font-semibold'
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
@@ -47,7 +47,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         {/* Friends Tab */}
         <button
           onClick={() => onSelectTab('friends')}
-          className={`flex flex-col items-center justify-center relative w-12 h-11 rounded-xl transition-all press-tactile ${
+          className={`flex flex-col items-center justify-center relative w-12 h-11 rounded-xl transition-colors duration-150 press-tactile ${
             activeTab === 'friends'
               ? 'text-blue-600 dark:text-blue-400 font-semibold'
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
@@ -73,7 +73,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               onSelectTab('feed');
             }
           }}
-          className="flex items-center justify-center w-10 h-10 -mt-2 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-md shadow-blue-500/30 press-bounce focus:outline-hidden"
+          className="flex items-center justify-center w-10 h-10 -mt-2 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-md shadow-blue-500/30 press-tactile focus:outline-hidden"
           title="Đăng bài mới"
           aria-label="Đăng bài mới"
         >
@@ -83,7 +83,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         {/* Messenger Tab */}
         <button
           onClick={() => onSelectTab('messenger')}
-          className={`flex flex-col items-center justify-center relative w-12 h-11 rounded-xl transition-all press-tactile ${
+          className={`flex flex-col items-center justify-center relative w-12 h-11 rounded-xl transition-colors duration-150 press-tactile ${
             activeTab === 'messenger'
               ? 'text-blue-600 dark:text-blue-400 font-semibold'
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
@@ -114,7 +114,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               onSelectTab('guestbook');
             }
           }}
-          className={`flex flex-col items-center justify-center relative w-12 h-11 rounded-xl transition-all press-tactile ${
+          className={`flex flex-col items-center justify-center relative w-12 h-11 rounded-xl transition-colors duration-150 press-tactile ${
             activeTab === 'profile' || activeTab === 'guestbook'
               ? 'text-blue-600 dark:text-blue-400 font-semibold'
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'

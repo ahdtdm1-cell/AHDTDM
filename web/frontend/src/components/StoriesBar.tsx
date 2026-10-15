@@ -53,7 +53,7 @@ export const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, friends }) 
             onClick={() => {
               if (!story.isCreate) setActiveStory(story);
             }}
-            className="relative w-24 sm:w-28 h-36 sm:h-44 rounded-2xl overflow-hidden shrink-0 cursor-pointer group shadow-2xs border border-slate-200/80 dark:border-white/10 transition-all duration-200 press-bounce snap-start"
+            className="relative w-24 sm:w-28 h-36 sm:h-44 rounded-2xl overflow-hidden shrink-0 cursor-pointer group shadow-2xs border border-slate-200/80 dark:border-white/10 transition-transform duration-200 press-tactile snap-start"
           >
             {story.isCreate ? (
               <div className="w-full h-full flex flex-col bg-white dark:bg-slate-900">
@@ -61,7 +61,7 @@ export const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, friends }) 
                   <img
                     src={story.avatar}
                     alt={story.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-200"
                   />
                 </div>
                 <div className="relative flex-1 flex flex-col items-center justify-end pb-2 pt-3 px-1">
@@ -145,7 +145,7 @@ export const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, friends }) 
                 className="flex-1 bg-white/20 backdrop-blur-md rounded-full px-4 py-2 text-xs text-white placeholder-white/70 outline-hidden border border-white/20 focus:border-white"
               />
               <button
-                className="w-9 h-9 rounded-full bg-rose-500/80 hover:bg-rose-500 text-white flex items-center justify-center transition-colors press-bounce cursor-pointer"
+                className="w-9 h-9 rounded-full bg-rose-500/80 hover:bg-rose-500 text-white flex items-center justify-center transition-colors press-tactile cursor-pointer"
                 title="Thả tim"
               >
                 <Heart className="w-4 h-4 fill-current" />

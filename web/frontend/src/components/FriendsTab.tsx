@@ -71,7 +71,7 @@ export const FriendsTab: React.FC<FriendsTabProps> = ({
         </p>
         <button
           onClick={() => onOpenAuth('login')}
-          className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-full text-sm shadow-md shadow-blue-500/20 press-tactile transition-all cursor-pointer"
+          className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-full text-sm shadow-md shadow-blue-500/20 press-tactile transition-colors duration-150 cursor-pointer"
         >
           Đăng nhập ngay
         </button>
@@ -96,7 +96,7 @@ export const FriendsTab: React.FC<FriendsTabProps> = ({
         <div className="bg-slate-200/60 dark:bg-white/5 p-1 rounded-2xl flex items-center gap-1 self-start sm:self-auto border border-slate-300/40 dark:border-white/5">
           <button
             onClick={() => setActiveFilter('all')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer press-tactile ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors duration-150 cursor-pointer press-tactile ${
               activeFilter === 'all'
                 ? 'bg-white dark:bg-white/15 text-slate-900 dark:text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -106,7 +106,7 @@ export const FriendsTab: React.FC<FriendsTabProps> = ({
           </button>
           <button
             onClick={() => setActiveFilter('requests')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer press-tactile flex items-center gap-1.5 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors duration-150 cursor-pointer press-tactile flex items-center gap-1.5 ${
               activeFilter === 'requests'
                 ? 'bg-white dark:bg-white/15 text-slate-900 dark:text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -133,7 +133,7 @@ export const FriendsTab: React.FC<FriendsTabProps> = ({
           </div>
 
           {incomingRequests.length === 0 ? (
-            <div className="p-8 text-center text-xs text-slate-400 bg-white dark:bg-[#0B0F17] rounded-2xl border border-slate-200/70 dark:border-white/10">
+            <div className="p-8 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/70 dark:border-white/10">
               Không có lời mời kết bạn nào đang chờ.
             </div>
           ) : (
@@ -141,7 +141,7 @@ export const FriendsTab: React.FC<FriendsTabProps> = ({
               {incomingRequests.map((req) => (
                 <div
                   key={req.id}
-                  className="bg-white dark:bg-[#0B0F17] rounded-2xl border border-slate-200/70 dark:border-white/10 p-4 flex flex-col gap-3.5 shadow-xs hover:shadow-md transition-all"
+                  className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/70 dark:border-white/10 p-4 flex flex-col gap-3.5 shadow-xs hover:shadow-md transition-shadow duration-150"
                 >
                   <div className="flex items-center gap-3">
                     <img
@@ -163,13 +163,13 @@ export const FriendsTab: React.FC<FriendsTabProps> = ({
                   <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-white/5">
                     <button
                       onClick={() => handleAccept(req.id, req.sender)}
-                      className="flex-1 py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all press-tactile shadow-xs cursor-pointer"
+                      className="flex-1 py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors duration-150 press-tactile shadow-xs cursor-pointer"
                     >
                       <Check className="w-3.5 h-3.5" /> Chấp nhận
                     </button>
                     <button
                       onClick={() => handleDecline(req.id)}
-                      className="py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all press-tactile cursor-pointer"
+                      className="py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors duration-150 press-tactile cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" /> Xóa
                     </button>
@@ -192,7 +192,7 @@ export const FriendsTab: React.FC<FriendsTabProps> = ({
           </div>
 
           {friends.length === 0 ? (
-            <div className="p-12 text-center text-xs text-slate-400 bg-white dark:bg-[#0B0F17] rounded-2xl border border-slate-200/70 dark:border-white/10">
+            <div className="p-12 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/70 dark:border-white/10">
               Bạn chưa có người bạn nào. Hãy tìm kiếm người dùng và gửi lời mời kết bạn!
             </div>
           ) : (
@@ -200,7 +200,7 @@ export const FriendsTab: React.FC<FriendsTabProps> = ({
               {friends.map((f) => (
                 <div
                   key={f.id}
-                  className="bg-white dark:bg-[#0B0F17] rounded-2xl border border-slate-200/70 dark:border-white/10 p-4 flex flex-col gap-3.5 shadow-xs hover:shadow-md transition-all hover:-translate-y-0.5"
+                  className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/70 dark:border-white/10 p-4 flex flex-col gap-3.5 shadow-xs hover:shadow-md transition-shadow duration-150"
                 >
                   <div
                     onClick={() => onViewProfile && onViewProfile(f.id)}
@@ -216,7 +216,7 @@ export const FriendsTab: React.FC<FriendsTabProps> = ({
                         className="w-12 h-12 rounded-2xl object-cover border border-slate-200/80 dark:border-white/10"
                       />
                       {f.is_online && (
-                        <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-[#0B0F17] shadow-xs animate-pulse" />
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 shadow-xs animate-pulse" />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -238,13 +238,13 @@ export const FriendsTab: React.FC<FriendsTabProps> = ({
                           f.avatar_url
                         )
                       }
-                      className="flex-1 py-1.5 px-3 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all press-tactile cursor-pointer"
+                      className="flex-1 py-1.5 px-3 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors duration-150 press-tactile cursor-pointer"
                     >
                       <MessageCircle className="w-3.5 h-3.5" /> Nhắn tin
                     </button>
                     <button
                       onClick={() => onViewProfile && onViewProfile(f.id)}
-                      className="py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition-all press-tactile cursor-pointer"
+                      className="py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition-colors duration-150 press-tactile cursor-pointer"
                     >
                       Trang cá nhân
                     </button>

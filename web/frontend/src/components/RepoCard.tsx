@@ -8,7 +8,7 @@ interface RepoCardProps {
 
 export const RepoCard: React.FC<RepoCardProps> = ({ repo }) => {
   return (
-    <div className="mt-3 p-3.5 rounded-2xl bg-zinc-950/80 light:bg-slate-50 border border-zinc-800/80 light:border-slate-200 hover:border-indigo-500/40 light:hover:border-indigo-300 transition-all duration-300 shadow-xl light:shadow-sm group">
+    <div className="mt-3 p-3.5 rounded-2xl bg-zinc-950/80 light:bg-slate-50 border border-zinc-800/80 light:border-slate-200 hover:border-indigo-500/40 light:hover:border-indigo-300 transition-colors duration-150 shadow-xl light:shadow-sm group">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-indigo-500/10 light:bg-indigo-100 border border-indigo-500/20 light:border-indigo-200 flex items-center justify-center text-indigo-400 light:text-indigo-600 group-hover:scale-105 transition-transform shadow-inner">
@@ -25,7 +25,7 @@ export const RepoCard: React.FC<RepoCardProps> = ({ repo }) => {
           href={repo.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="p-1.5 rounded-xl bg-zinc-900 light:bg-white border border-zinc-800 light:border-slate-200 text-zinc-400 light:text-slate-600 hover:text-white light:hover:text-indigo-600 hover:bg-indigo-600 light:hover:bg-indigo-50 transition-all flex items-center justify-center shadow-sm active:scale-95"
+          className="p-1.5 rounded-xl bg-zinc-900 light:bg-white border border-zinc-800 light:border-slate-200 text-zinc-400 light:text-slate-600 hover:text-white light:hover:text-indigo-600 hover:bg-indigo-600 light:hover:bg-indigo-50 transition-colors duration-150 flex items-center justify-center shadow-sm press-tactile"
           title="Mở GitHub Repository"
         >
           <ExternalLink className="w-3.5 h-3.5" />

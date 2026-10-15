@@ -74,7 +74,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             disabled={isSubmitting}
-            className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full px-4 py-2 pr-10 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-hidden border border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
+            className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full px-4 py-2 pr-10 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-hidden border border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-colors duration-150"
           />
           <button
             type="submit"
