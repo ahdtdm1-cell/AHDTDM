@@ -89,7 +89,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-def build_guestbook_response(msg: GuestbookMessage) -> GuestbookResponse:
+def build_guestbook_response(msg: GuestbookMessage, include_token: bool = False) -> GuestbookResponse:
     author_role = "anonymous"
     if msg.user:
         author_role = msg.user.role
@@ -101,7 +101,7 @@ def build_guestbook_response(msg: GuestbookMessage) -> GuestbookResponse:
         avatar_color=msg.avatar_color,
         likes_count=msg.likes_count,
         created_at=msg.created_at,
-        user_token=msg.user_token,
+        user_token=msg.user_token if include_token else None,
         user_id=msg.user_id,
         is_edited=msg.is_edited or False,
         edited_at=msg.edited_at,
@@ -142,7 +142,8 @@ def get_online_count():
 @router.get("", response_model=List[GuestbookResponse])
 def get_guestbook_messages(limit: int = 100, db: Session = Depends(get_db)):
     messages = db.query(GuestbookMessage).order_by(GuestbookMessage.created_at.asc()).limit(limit).all()
-    return [build_guestbook_response(msg) for msg in messages]
+    # In public list queries, never leak private user_token
+    return [build_guestbook_response(msg, include_token=False) for msg in messages]
 
 @router.post("", response_model=GuestbookResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(rate_limiter)])
 async def create_guestbook_message(
@@ -179,7 +180,7 @@ async def create_guestbook_message(
     db.add(msg)
     db.commit()
     db.refresh(msg)
-    resp = build_guestbook_response(msg)
+    resp = build_guestbook_response(msg, include_token=True)
 
     import json
     
@@ -266,7 +267,7 @@ async def delete_guestbook_message(
 
     return {"success": True, "message": f"Tin nhắn ID {message_id} đã được xóa thành công bởi Admin."}
 
-@router.post("/{message_id}/like", response_model=GuestbookResponse)
+@router.post("/{message_id}/like", response_model=GuestbookResponse, dependencies=[Depends(rate_limiter)])
 async def like_guestbook_message(message_id: int, db: Session = Depends(get_db)):
     msg = db.query(GuestbookMessage).filter(GuestbookMessage.id == message_id).first()
     if not msg:

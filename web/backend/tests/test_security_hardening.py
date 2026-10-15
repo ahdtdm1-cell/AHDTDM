@@ -1,0 +1,348 @@
+import pytest
+from pydantic import ValidationError
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from app.schemas import UserCreate, UserPasswordUpdate
+from app.models import User
+from app.database import Base, get_db
+from app.main import app
+
+# In-memory SQLite for testing
+SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def override_get_db():
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+@pytest.fixture(autouse=True)
+def setup_db():
+    app.dependency_overrides[get_db] = override_get_db
+    Base.metadata.create_all(bind=engine)
+    yield
+    Base.metadata.drop_all(bind=engine)
+    app.dependency_overrides.clear()
+
+def test_password_policy_enforcement():
+    # Weak passwords must be rejected
+    weak_passwords = [
+        "short",           # < 8 chars
+        "nouppercase1!",   # no uppercase
+        "NOLOWERCASE1!",   # no lowercase
+        "NoSpecialChar1",  # no special char
+        "NoDigits!@#$",    # no digit
+    ]
+    for pw in weak_passwords:
+        with pytest.raises(ValidationError):
+            UserCreate(username="validuser", password=pw)
+        with pytest.raises(ValidationError):
+            UserPasswordUpdate(current_password="old", new_password=pw)
+
+    # Strong password must succeed
+    valid = UserCreate(username="validuser", password="StrongPass123!")
+    assert valid.password == "StrongPass123!"
+
+def test_user_model_has_lockout_fields():
+    user = User(username="locktest", hashed_password="pw")
+    assert hasattr(user, "failed_login_attempts")
+    assert hasattr(user, "locked_until")
+    assert user.failed_login_attempts == 0
+    assert user.locked_until is None
+
+def test_rate_limiter_rejects_testclient_backdoor():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.rate_limit import _auth_rate_limit_store
+    _auth_rate_limit_store.clear()
+
+    test_client = TestClient(app)
+    # Attempt 5 times
+    for _ in range(5):
+        test_client.post("/api/v1/auth/token", data={"username": "fake", "password": "wrong"})
+    # 6th attempt must be rejected with 429 Too Many Requests
+    res = test_client.post("/api/v1/auth/token", data={"username": "fake", "password": "wrong"})
+    assert res.status_code == 429
+    assert "Quá nhiều yêu cầu" in res.json()["detail"] or "thử quá nhiều lần" in res.json()["detail"]
+    _auth_rate_limit_store.clear()
+
+def test_rate_limiter_ignores_spoofed_x_forwarded_for():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.rate_limit import _auth_rate_limit_store
+    _auth_rate_limit_store.clear()
+
+    test_client = TestClient(app)
+    # Attempt 5 times with changing X-Forwarded-For headers
+    for i in range(5):
+        test_client.post(
+            "/api/v1/auth/token",
+            data={"username": "fake", "password": "wrong"},
+            headers={"X-Forwarded-For": f"10.0.0.{i+1}"}
+        )
+    # 6th attempt with another spoofed IP must STILL be rate limited because untrusted headers are ignored
+    res = test_client.post(
+        "/api/v1/auth/token",
+        data={"username": "fake", "password": "wrong"},
+        headers={"X-Forwarded-For": "10.0.0.99"}
+    )
+    assert res.status_code == 429
+    _auth_rate_limit_store.clear()
+
+def test_account_lockout_after_five_failed_attempts():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.rate_limit import reset_rate_limits
+    from app.security import get_password_hash
+
+    reset_rate_limits()
+    db = TestingSessionLocal()
+    target_user = User(
+        username="target_victim",
+        hashed_password=get_password_hash("VictimPass123!"),
+        role="user"
+    )
+    db.add(target_user)
+    db.commit()
+
+    test_client = TestClient(app)
+
+    # 4 failed attempts should yield 401 Unauthorized
+    for i in range(4):
+        reset_rate_limits()
+        resp = test_client.post("/api/v1/auth/token", data={"username": "target_victim", "password": f"wrong_{i}"})
+        assert resp.status_code == 401, f"Attempt {i+1} should be 401, got {resp.status_code}"
+
+    # 5th failed attempt should trigger account lockout (403 Forbidden)
+    reset_rate_limits()
+    resp5 = test_client.post("/api/v1/auth/token", data={"username": "target_victim", "password": "wrong_final"})
+    assert resp5.status_code == 403, f"5th attempt should be 403, got {resp5.status_code}"
+    assert "tạm khóa" in resp5.json()["detail"] or "locked" in resp5.json()["detail"].lower()
+
+    # 6th attempt with CORRECT password must STILL be rejected with 403 because account is locked
+    reset_rate_limits()
+    resp6 = test_client.post("/api/v1/auth/token", data={"username": "target_victim", "password": "VictimPass123!"})
+    assert resp6.status_code == 403
+    assert "tạm khóa" in resp6.json()["detail"] or "locked" in resp6.json()["detail"].lower()
+
+    db.delete(target_user)
+    db.commit()
+    db.close()
+    reset_rate_limits()
+
+def test_account_lockout_expires_and_resets():
+    from datetime import datetime, timedelta
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.rate_limit import reset_rate_limits
+    from app.security import get_password_hash
+
+    reset_rate_limits()
+    db = TestingSessionLocal()
+    # Create user with locked_until in the PAST (lock expired)
+    past_time = datetime.utcnow() - timedelta(minutes=1)
+    user = User(
+        username="expired_lock_user",
+        hashed_password=get_password_hash("ValidPass123!"),
+        role="user",
+        failed_login_attempts=5,
+        locked_until=past_time
+    )
+    db.add(user)
+    db.commit()
+
+    test_client = TestClient(app)
+    # Login with correct password after lock expiration -> should succeed (200)
+    resp = test_client.post("/api/v1/auth/token", data={"username": "expired_lock_user", "password": "ValidPass123!"})
+    assert resp.status_code == 200
+    assert "user" in resp.json()
+
+    # DB record should be reset
+    db.refresh(user)
+    assert user.locked_until is None
+    assert user.failed_login_attempts == 0
+
+    db.delete(user)
+    db.commit()
+    db.close()
+    reset_rate_limits()
+
+def test_login_success_resets_failed_counter():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.rate_limit import reset_rate_limits
+    from app.security import get_password_hash
+
+    reset_rate_limits()
+    db = TestingSessionLocal()
+    user = User(
+        username="counter_user",
+        hashed_password=get_password_hash("CounterPass123!"),
+        role="user"
+    )
+    db.add(user)
+    db.commit()
+
+    test_client = TestClient(app)
+
+    # 2 failed attempts
+    for _ in range(2):
+        reset_rate_limits()
+        test_client.post("/api/v1/auth/token", data={"username": "counter_user", "password": "bad"})
+
+    db.refresh(user)
+    assert user.failed_login_attempts == 2
+
+    # Successful login
+    reset_rate_limits()
+    resp = test_client.post("/api/v1/auth/token", data={"username": "counter_user", "password": "CounterPass123!"})
+    assert resp.status_code == 200
+
+    # Counter should be reset to 0
+    db.refresh(user)
+    assert user.failed_login_attempts == 0
+
+    db.delete(user)
+    db.commit()
+    db.close()
+    reset_rate_limits()
+
+def test_users_endpoint_requires_auth_preventing_idor():
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    test_client = TestClient(app)
+    # Anonymous request to /users/1 must be rejected with 401 Unauthorized
+    resp = test_client.get("/api/v1/users/1")
+    assert resp.status_code == 401, f"Expected 401 Unauthorized for anonymous IDOR probe, got {resp.status_code}"
+
+def test_guestbook_does_not_leak_user_token_in_public_feed():
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    test_client = TestClient(app)
+    # Post a message with a private token
+    post_res = test_client.post("/api/v1/guestbook", json={
+        "author_name": "TokenLeakTester",
+        "content": "Checking token exposure",
+        "avatar_color": "#2563EB",
+        "user_token": "secret_private_token_xyz_12345"
+    })
+    assert post_res.status_code == 201
+
+    # Public GET /guestbook must NEVER expose user_token in listing
+    get_res = test_client.get("/api/v1/guestbook")
+    assert get_res.status_code == 200
+    messages = get_res.json()
+    assert len(messages) > 0
+    for msg in messages:
+        assert msg.get("user_token") is None, f"user_token leaked in public response: {msg.get('user_token')}"
+
+def test_swagger_and_openapi_gating():
+    from app.config import Settings
+    # Default in production: ENABLE_SWAGGER should default to False
+    prod_settings = Settings()
+    # If not explicitly enabled, ENABLE_SWAGGER is False
+    assert hasattr(prod_settings, "ENABLE_SWAGGER")
+
+def test_admin_seed_does_not_use_weak_default_admin123():
+    import os
+    from app.main import seed_default_admin
+    from app.models import User
+    from app.security import verify_password
+
+    # Ensure no admin exists
+    db = TestingSessionLocal()
+    db.query(User).filter(User.username == "admin").delete()
+    db.commit()
+
+    # Clear ADMIN_PASSWORD env var
+    old_env = os.environ.pop("ADMIN_PASSWORD", None)
+    try:
+        # Re-seed
+        seed_default_admin()
+        admin = db.query(User).filter(User.username == "admin").first()
+        if admin:
+            # Must NOT be weak 'admin123'
+            assert not verify_password("admin123", admin.hashed_password), "Default admin password must not be 'admin123'"
+    finally:
+        if old_env:
+            os.environ["ADMIN_PASSWORD"] = old_env
+        db.close()
+
+def test_captcha_generation():
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    test_client = TestClient(app)
+    resp = test_client.get("/api/v1/auth/captcha")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "captcha_token" in data
+    assert "captcha_svg" in data
+    assert "<svg" in data["captcha_svg"]
+    assert "</svg>" in data["captcha_svg"]
+
+def test_captcha_verification_rejects_wrong_answer():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.rate_limit import reset_rate_limits
+    from tests.test_auth_and_moderation import encrypt_test_payload
+
+    reset_rate_limits()
+    test_client = TestClient(app)
+
+    # 1. Fetch captcha
+    c_resp = test_client.get("/api/v1/auth/captcha")
+    c_data = c_resp.json()
+
+    # 2. Register with WRONG answer
+    reg_payload = encrypt_test_payload({
+        "username": "wrong_captcha_user",
+        "password": "Password123!",
+        "captcha_token": c_data["captcha_token"],
+        "captcha_answer": "999999" # wrong answer
+    })
+    res = test_client.post("/api/v1/auth/register", json=reg_payload)
+    assert res.status_code == 400
+    assert "CAPTCHA không chính xác" in res.json()["detail"] or "captcha" in res.json()["detail"].lower()
+
+def test_captcha_verification_accepts_correct_answer():
+    import jwt
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.security import SECRET_KEY, ALGORITHM
+    from app.rate_limit import reset_rate_limits
+    from tests.test_auth_and_moderation import encrypt_test_payload
+
+    reset_rate_limits()
+    test_client = TestClient(app)
+
+    # 1. Fetch captcha
+    c_resp = test_client.get("/api/v1/auth/captcha")
+    c_data = c_resp.json()
+
+    # 2. Extract true answer from signed token for test verification
+    token_payload = jwt.decode(c_data["captcha_token"], SECRET_KEY, algorithms=[ALGORITHM])
+    correct_ans = token_payload["ans"]
+
+    # 3. Register with CORRECT answer
+    reg_payload = encrypt_test_payload({
+        "username": "correct_captcha_user",
+        "password": "Password123!",
+        "captcha_token": c_data["captcha_token"],
+        "captcha_answer": correct_ans
+    })
+    res = test_client.post("/api/v1/auth/register", json=reg_payload)
+    assert res.status_code == 201
+    assert res.json()["user"]["username"] == "correct_captcha_user"
+

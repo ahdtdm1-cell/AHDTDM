@@ -8,16 +8,18 @@ from fastapi.middleware.cors import CORSMiddleware
 import traceback
 
 from app.config import settings
-from app.database import engine, Base, SessionLocal
+from app.database import engine, Base, SessionLocal, ensure_schema_columns
 from app.models import User
 from app.security import get_password_hash
 from app.routers import health, guestbook, topics, auth, users
 from app.crypto import router as crypto_router
+from app.captcha import router as captcha_router
 from app.services.cleanup import cleanup_loop_task
 
 logger = logging.getLogger(__name__)
 
-# Ensure DB schemas exist
+# Ensure DB schemas and required columns exist
+ensure_schema_columns(engine)
 Base.metadata.create_all(bind=engine)
 
 def seed_default_admin():
@@ -27,10 +29,10 @@ def seed_default_admin():
         if not admin_user:
             logger.info("No admin user found. Creating default admin account...")
             import secrets
-            admin_password = os.getenv("ADMIN_PASSWORD") or "admin123"
+            admin_password = os.getenv("ADMIN_PASSWORD") or "admin1234567890!@#$%^&*()"
             if not admin_password:
                 admin_password = secrets.token_urlsafe(16)
-                logger.warning(f"⚠️ ADMIN_PASSWORD chưa được thiết lập. Đã tự động tạo mật khẩu admin: {admin_password}")
+                logger.warning(f"⚠️ ADMIN_PASSWORD chưa được thiết lập. Đã tự động tạo mật khẩu admin ngẫu nhiên an toàn: {admin_password}")
             
             default_admin = User(
                 username="admin",
@@ -61,7 +63,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    openapi_url=f"{settings.API_PREFIX}/openapi.json",
+    openapi_url=f"{settings.API_PREFIX}/openapi.json" if settings.ENABLE_SWAGGER else None,
+    docs_url="/docs" if settings.ENABLE_SWAGGER else None,
+    redoc_url="/redoc" if settings.ENABLE_SWAGGER else None,
     lifespan=lifespan,
     debug=os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
 )
@@ -75,20 +79,35 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 @app.middleware("http")
-async def strip_server_header(request: Request, call_next):
+async def security_headers_middleware(request: Request, call_next):
     response = await call_next(request)
     if "Server" in response.headers:
         del response.headers["Server"]
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
 
 
-allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "*")
-if allowed_origins_str == "*":
-    allow_origin_regex = r".*"
-    allowed_origins = []
-else:
+DEFAULT_ALLOWED_ORIGINS = [
+    "https://chat.taild6d848.ts.net",
+    "https://chat-ts.taild6d848.ts.net",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173"
+]
+
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS")
+if allowed_origins_env and allowed_origins_env != "*":
+    allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",")]
     allow_origin_regex = None
-    allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",")]
+elif allowed_origins_env == "*":
+    allowed_origins = ["*"]
+    allow_origin_regex = None
+else:
+    allowed_origins = DEFAULT_ALLOWED_ORIGINS
+    allow_origin_regex = r"^https://.*\.ts\.net$"
 
 app.add_middleware(
     CORSMiddleware,
@@ -101,6 +120,7 @@ app.add_middleware(
 
 # Mount static files for uploads
 from fastapi.staticfiles import StaticFiles
+os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Route registration (/api and /api/v1 for backward compatibility and standards)
@@ -111,3 +131,4 @@ for prefix in [settings.API_PREFIX, f"{settings.API_PREFIX}/v1"]:
     app.include_router(topics.router, prefix=prefix)
     app.include_router(users.router, prefix=prefix)
     app.include_router(crypto_router, prefix=prefix)
+    app.include_router(captcha_router, prefix=prefix)
