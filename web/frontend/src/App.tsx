@@ -40,10 +40,19 @@ export const App: React.FC = () => {
   });
 
   useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-theme', theme);
+    document.body.setAttribute('data-theme', theme);
     if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
+      root.classList.add('dark');
+      root.classList.remove('light');
+      document.body.classList.add('dark');
+      document.body.classList.remove('light');
     } else {
-      document.documentElement.classList.remove('dark');
+      root.classList.remove('dark');
+      root.classList.add('light');
+      document.body.classList.remove('dark');
+      document.body.classList.add('light');
     }
     localStorage.setItem('portfolio_theme', theme);
   }, [theme]);
@@ -256,7 +265,7 @@ export const App: React.FC = () => {
     <div
       data-testid="app-container"
       data-theme={theme}
-      className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200"
+      className="min-h-screen bg-slate-100 dark:bg-[#07090E] text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200"
     >
       {/* 1. Global Navigation Topbar */}
       <Topbar
@@ -381,7 +390,7 @@ export const App: React.FC = () => {
               theme={theme}
               onToggleTheme={handleToggleTheme}
             />
-            <main className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800">
+            <main className="flex-1 flex flex-col bg-[#F8FAFC] dark:bg-[#07090E] border-l border-slate-200 dark:border-slate-800">
               <ChatWindow
                 topic={legacyTopics.find((t) => t.id === activeTopicId) || null}
                 messages={legacyMessages}

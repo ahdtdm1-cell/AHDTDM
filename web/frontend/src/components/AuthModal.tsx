@@ -115,12 +115,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-opacity duration-300">
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-slate-900/90 p-8 border border-white/10 shadow-2xl backdrop-blur-2xl text-slate-100 animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white dark:bg-slate-900/95 p-8 border border-slate-200 dark:border-white/10 shadow-2xl backdrop-blur-2xl text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+          className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
           aria-label="Đóng"
         >
           <X className="w-5 h-5" />
@@ -128,13 +128,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
         {/* Modal Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-600/20 text-blue-400 mb-3 border border-blue-500/30">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-600/20 text-blue-500 dark:text-blue-400 mb-3 border border-blue-500/30">
             <Shield className="w-6 h-6" />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             {isLogin ? 'Xác thực tài khoản' : 'Tạo tài khoản Thành viên'}
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             {isLogin
               ? 'Đăng nhập với tài khoản Thành viên hoặc Admin'
               : 'Đăng ký tài khoản để tin nhắn của bạn được lưu vĩnh viễn trong DB'}
@@ -142,12 +142,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         </div>
 
         {/* Segmented Control Tabs (Apple Style) */}
-        <div className="flex p-1 mb-6 rounded-2xl bg-slate-800/80 border border-white/5">
+        <div className="flex p-1 mb-6 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-white/5">
           <button
             type="button"
             onClick={() => { setIsLogin(true); setError(null); setSuccessMsg(null); loadCaptcha(); }}
             className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all duration-200 ${
-              isLogin ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              isLogin ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Đăng nhập
@@ -156,7 +156,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             type="button"
             onClick={() => { setIsLogin(false); setError(null); setSuccessMsg(null); loadCaptcha(); }}
             className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all duration-200 ${
-              !isLogin ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              !isLogin ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Đăng ký
@@ -165,14 +165,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
         {/* Alerts */}
         {error && (
-          <div className="mb-4 flex items-center gap-2 p-3 text-sm rounded-xl bg-red-500/15 border border-red-500/30 text-red-300">
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+          <div className="mb-4 flex items-center gap-2 p-3 text-sm rounded-xl bg-red-500/15 border border-red-500/30 text-red-600 dark:text-red-300">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-500 dark:text-red-400" />
             <span>{error}</span>
           </div>
         )}
         {successMsg && (
-          <div className="mb-4 flex items-center gap-2 p-3 text-sm rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+          <div className="mb-4 flex items-center gap-2 p-3 text-sm rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500 dark:text-emerald-400" />
             <span>{successMsg}</span>
           </div>
         )}
@@ -180,11 +180,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
               Tên đăng nhập
             </label>
             <div className="relative">
-              <User className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-500" />
+              <User className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400 dark:text-slate-500" />
               <input
                 type="text"
                 required
@@ -193,17 +193,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 placeholder="Nhập tên tài khoản..."
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800/60 border border-white/10 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
               Mật khẩu {isLogin ? '' : '(Tối thiểu 8 ký tự)'}
             </label>
             <div className="relative">
-              <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-500" />
+              <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400 dark:text-slate-500" />
               <input
                 type="password"
                 required
@@ -211,7 +211,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800/60 border border-white/10 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
               />
             </div>
             {!isLogin && <PasswordStrengthMeter password={password} />}
@@ -220,14 +220,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           {/* CAPTCHA Protection Section */}
           <div className="pt-1">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                 Mã xác thực chống Bot (CAPTCHA)
               </label>
               <button
                 type="button"
                 onClick={loadCaptcha}
                 disabled={captchaLoading}
-                className="text-xs flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors"
+                className="text-xs flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors"
                 title="Đổi mã khác"
               >
                 <RotateCw className={`w-3 h-3 ${captchaLoading ? 'animate-spin' : ''}`} />
@@ -238,12 +238,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 items-center">
               {/* SVG Display */}
               <div 
-                className="h-[46px] rounded-xl bg-slate-800/80 border border-white/10 flex items-center justify-center overflow-hidden shadow-inner cursor-pointer hover:border-blue-500/40 transition-colors"
+                className="h-[46px] rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 flex items-center justify-center overflow-hidden shadow-inner cursor-pointer hover:border-blue-500/40 transition-colors"
                 onClick={loadCaptcha}
                 title="Bấm để đổi mã mới"
               >
                 {captchaLoading ? (
-                  <div className="w-5 h-5 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
                 ) : captcha?.captcha_svg ? (
                   <div 
                     dangerouslySetInnerHTML={{ __html: captcha.captcha_svg }}
@@ -262,10 +262,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 placeholder="Nhập đáp án..."
                 value={captchaAnswer}
                 onChange={(e) => setCaptchaAnswer(e.target.value)}
-                className="w-full px-3.5 py-2.5 h-[46px] rounded-xl bg-slate-800/60 border border-white/10 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono text-center tracking-wider font-semibold"
+                className="w-full px-3.5 py-2.5 h-[46px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono text-center tracking-wider font-semibold"
               />
             </div>
-            <p className="text-[11px] text-slate-500 mt-1">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
               * Tính kết quả phép tính ở hình trên để xác thực người dùng thật.
             </p>
           </div>
@@ -287,8 +287,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         </form>
 
         {/* Footer Retention Note */}
-        <div className="mt-6 pt-4 border-t border-white/5 text-center text-xs text-slate-500">
-          💡 <span className="text-slate-400 font-medium">Quy định lưu giữ:</span> Thành viên được lưu vĩnh viễn. Khách vãng lai tự động bị xóa sau 30 ngày.
+        <div className="mt-6 pt-4 border-t border-slate-100 dark:border-white/5 text-center text-xs text-slate-500 dark:text-slate-400">
+          💡 <span className="text-slate-700 dark:text-slate-300 font-medium">Quy định lưu giữ:</span> Thành viên được lưu vĩnh viễn. Khách vãng lai tự động bị xóa sau 30 ngày.
         </div>
 
       </div>
