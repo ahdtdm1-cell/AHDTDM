@@ -2,18 +2,29 @@ import React, { useState, useEffect, useRef } from 'react';
 import { authService } from '../services/authService';
 import { fetchUserProfile } from '../services/api';
 import { User } from '../types/auth';
-import { MapPin, Globe, Calendar, FileText, Users, User as UserIcon, ArrowLeft, Camera, Edit2, Key, X, Check } from 'lucide-react';
+import { MapPin, Globe, Calendar, FileText, Users, User as UserIcon, ArrowLeft, Camera, Edit2, Key, X, Check, MessageCircle, UserPlus } from 'lucide-react';
 import { PasswordStrengthMeter } from './PasswordStrengthMeter';
+import { socialApi } from '../services/socialApi';
+import { SocialPost, UserProfile } from '../types/social';
+import { PostCard } from './PostCard';
 
 interface ProfilePageProps {
   userId?: number | null;
   onBack: () => void;
+  onOpenDirectChat?: (friendId: number, friendName: string, avatarUrl?: string) => void;
+  onOpenAuth?: (mode: 'login') => void;
 }
 
-const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack }) => {
+const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectChat, onOpenAuth }) => {
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Social feed on profile
+  const [activeProfileTab, setActiveProfileTab] = useState<'posts' | 'friends'>('posts');
+  const [userPosts, setUserPosts] = useState<SocialPost[]>([]);
+  const [userFriends, setUserFriends] = useState<UserProfile[]>([]);
+  const [friendReqSent, setFriendReqSent] = useState(false);
 
   // Edit states
   const currentUser = authService.getUser();
@@ -58,6 +69,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack }) => {
 
     fetchProfile();
   }, [userId]);
+
+  useEffect(() => {
+    if (profile?.id) {
+      socialApi.fetchPosts(0, 30, profile.id).then(setUserPosts).catch(() => {});
+      socialApi.fetchFriends(profile.id).then(setUserFriends).catch(() => {});
+    }
+  }, [profile?.id]);
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -240,7 +258,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack }) => {
                   <h1 className="text-3xl font-bold text-zinc-100 light:text-slate-900">{displayName}</h1>
                   <p className="text-lg text-zinc-400 light:text-slate-500">@{profile.username}</p>
                 </div>
-                {isOwner && (
+                {isOwner ? (
                   <button 
                     onClick={() => setIsEditingInfo(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-zinc-800 light:bg-slate-200 hover:bg-zinc-700 light:hover:bg-slate-300 text-zinc-200 light:text-slate-800 rounded-lg transition-colors font-medium text-sm"
@@ -248,6 +266,34 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack }) => {
                     <Edit2 className="w-4 h-4" />
                     Chỉnh sửa thông tin
                   </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {onOpenDirectChat && (
+                      <button
+                        onClick={() => onOpenDirectChat(profile.id, displayName, profile.avatar_url || undefined)}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors font-semibold text-sm shadow-xs cursor-pointer"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        Nhắn tin
+                      </button>
+                    )}
+                    <button
+                      onClick={async () => {
+                        try {
+                          await socialApi.sendFriendRequest(profile.id);
+                          setFriendReqSent(true);
+                          alert('Đã gửi lời mời kết bạn!');
+                        } catch (err: any) {
+                          alert(err.message || 'Lỗi khi gửi lời mời.');
+                        }
+                      }}
+                      disabled={friendReqSent}
+                      className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl transition-colors font-semibold text-sm cursor-pointer disabled:opacity-50"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      {friendReqSent ? 'Đã gửi lời mời' : 'Kết bạn'}
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -331,15 +377,80 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack }) => {
             </div>
           )}
 
-          <div className="flex gap-8 mt-8 pt-6 border-t border-zinc-800 light:border-slate-200">
-            <div className="flex flex-col">
-              <span className="text-2xl font-bold text-zinc-100 light:text-slate-900">0</span>
-              <span className="text-sm font-medium text-zinc-500 light:text-slate-500 flex items-center gap-1.5"><FileText className="w-4 h-4"/> Bài viết</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-2xl font-bold text-zinc-100 light:text-slate-900">0</span>
-              <span className="text-sm font-medium text-zinc-500 light:text-slate-500 flex items-center gap-1.5"><Users className="w-4 h-4"/> Người theo dõi</span>
-            </div>
+          {/* Profile Tabs */}
+          <div className="flex items-center gap-6 mt-8 border-b border-zinc-800 dark:border-slate-800">
+            <button
+              onClick={() => setActiveProfileTab('posts')}
+              className={`pb-3 font-semibold text-sm transition-colors border-b-2 cursor-pointer ${
+                activeProfileTab === 'posts'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              Bài viết ({userPosts.length})
+            </button>
+            <button
+              onClick={() => setActiveProfileTab('friends')}
+              className={`pb-3 font-semibold text-sm transition-colors border-b-2 cursor-pointer ${
+                activeProfileTab === 'friends'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              Bạn bè ({userFriends.length})
+            </button>
+          </div>
+
+          {/* Tab content */}
+          <div className="py-6">
+            {activeProfileTab === 'posts' ? (
+              <div className="flex flex-col gap-4 max-w-2xl">
+                {userPosts.length === 0 ? (
+                  <div className="p-8 text-center text-sm text-slate-400 bg-white dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700">
+                    Chưa có bài viết nào được đăng.
+                  </div>
+                ) : (
+                  userPosts.map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      currentUser={currentUser}
+                      onPostDeleted={(postId) =>
+                        setUserPosts((prev) => prev.filter((p) => p.id !== postId))
+                      }
+                      onOpenAuth={onOpenAuth || (() => {})}
+                    />
+                  ))
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {userFriends.length === 0 ? (
+                  <div className="col-span-full p-8 text-center text-sm text-slate-400 bg-white dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700">
+                    Chưa có bạn bè nào.
+                  </div>
+                ) : (
+                  userFriends.map((f) => (
+                    <div
+                      key={f.id}
+                      className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-3"
+                    >
+                      <img
+                        src={f.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${f.username}`}
+                        alt={f.username}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <span className="font-semibold text-xs text-slate-800 dark:text-slate-100 block truncate">
+                          {f.display_name || f.username}
+                        </span>
+                        <span className="text-[11px] text-slate-400">@{f.username}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

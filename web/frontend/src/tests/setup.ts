@@ -22,8 +22,14 @@ Object.defineProperty(globalThis, 'localStorage', {
   writable: true,
 });
 
+import { vi } from 'vitest';
+
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
   configurable: true,
   writable: true,
 });
+
+if (typeof window !== 'undefined') {
+  window.HTMLElement.prototype.scrollIntoView = vi.fn();
+}

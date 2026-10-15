@@ -1,514 +1,474 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Topbar } from './components/Topbar';
+import { LeftSidebar } from './components/LeftSidebar';
+import { RightSidebar } from './components/RightSidebar';
+import { StoriesBar } from './components/StoriesBar';
+import { CreatePostBox } from './components/CreatePostBox';
+import { PostCard } from './components/PostCard';
+import { FloatingChatDock } from './components/FloatingChatDock';
+import { MessengerPage } from './components/MessengerPage';
+import { FriendsTab } from './components/FriendsTab';
+import ProfilePage from './components/ProfilePage';
+import { AuthModal } from './components/AuthModal';
+
+// Keep legacy portfolio guestbook components for the "Lưu bút" tab
 import { Sidebar } from './components/Sidebar';
 import { ChatWindow } from './components/ChatWindow';
-import { AuthModal } from './components/AuthModal';
 import { EditMessageModal } from './components/EditMessageModal';
-import ProfilePage from './components/ProfilePage';
-import { ChatTopic, ChatMessage } from './types/chat';
+
 import { User } from './types/auth';
 import { authService } from './services/authService';
 import {
-  fetchTopics,
-  fetchTopicMessages,
-  fetchGuestbookMessages,
-  postGuestbookMessage,
-  likeGuestbookMessage,
-  getOrCreateUserToken,
-  fetchOnlineCount,
+  SocialPost, UserProfile, ActiveChatWindow,
+  ChatMessage, NotificationItem
+} from './types/social';
+import { socialApi } from './services/socialApi';
+import { useWebSocket } from './hooks/useWebSocket';
+
+// Legacy services for guestbook tab
+import { ChatTopic, ChatMessage as LegacyChatMessage } from './types/chat';
+import {
+  fetchTopics, fetchTopicMessages, fetchGuestbookMessages,
+  postGuestbookMessage, likeGuestbookMessage, getOrCreateUserToken
 } from './services/api';
-import { guestbookWS } from './services/websocket';
 
 export const App: React.FC = () => {
-  const [topics, setTopics] = useState<ChatTopic[]>([]);
-  const [activeTopicId, setActiveTopicId] = useState<string>('guestbook');
-  const [topicMessagesMap, setTopicMessagesMap] = useState<Record<string, ChatMessage[]>>({});
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isTyping, setIsTyping] = useState<boolean>(false);
-  const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
-  const [isSendingGuestbook, setIsSendingGuestbook] = useState<boolean>(false);
-  const [onlineCount, setOnlineCount] = useState<number>(guestbookWS.lastOnlineCount || 1);
-  const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
+  // Theme state
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('portfolio_theme');
     return saved === 'light' ? 'light' : 'dark';
   });
 
-  // View State
-  const [viewMode, setViewMode] = useState<'chat' | 'profile'>('chat');
-  const [profileUserId, setProfileUserId] = useState<number | null>(null);
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('portfolio_theme', theme);
+  }, [theme]);
 
-  const handleViewProfile = (userId: number | null) => {
-    setProfileUserId(userId);
-    setViewMode('profile');
-    if (isMobileOpen) setIsMobileOpen(false);
+  const handleToggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  // Auth & Admin Moderation State
+  // Auth state
   const [currentUser, setCurrentUser] = useState<User | null>(() => authService.getUser());
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
-  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
-  // Verify auth session on load
   useEffect(() => {
-    async function checkAuth() {
+    async function verifyAuth() {
       const user = await authService.getMe();
       setCurrentUser(user);
     }
-    checkAuth();
+    verifyAuth();
   }, []);
 
-
-  const handleToggleTheme = () => {
-    setTheme((prev) => {
-      const next = prev === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('portfolio_theme', next);
-      return next;
-    });
+  const handleOpenAuth = (mode: 'login' | 'register') => {
+    setAuthMode(mode);
+    setIsAuthModalOpen(true);
   };
 
-  const currentUserToken = getOrCreateUserToken();
-
-  const isMyGuestbookMessage = (entry: { user_token?: string; author_name: string; user_id?: number | null }) => {
-    if (currentUser && entry.user_id && entry.user_id === currentUser.id) {
-      return true;
-    }
-    if (entry.user_token && currentUserToken && entry.user_token === currentUserToken) {
-      return true;
-    }
-    const activeName = localStorage.getItem('guestbook_author_name') || '';
-    if (activeName.trim().length >= 2 && entry.author_name.trim().toLowerCase() === activeName.trim().toLowerCase()) {
-      return true;
-    }
-    return false;
+  const handleLogout = async () => {
+    await authService.logout();
+    setCurrentUser(null);
+    window.location.reload();
   };
 
-  // Load Initial Topics & Periodically Poll Online Count as Failsafe
-  useEffect(() => {
-    async function loadInitialData() {
-      try {
-        const loadedTopics = await fetchTopics();
-        setTopics(loadedTopics);
-        if (loadedTopics.length > 0 && !loadedTopics.some((t) => t.id === activeTopicId)) {
-          setActiveTopicId(loadedTopics[0].id);
-        }
-      } catch (err) {
-        console.error('Failed to load topics:', err);
-      }
+  // Navigation tabs state
+  const [activeTab, setActiveTab] = useState<'feed' | 'friends' | 'messenger' | 'guestbook' | 'profile'>('feed');
+  const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
+  const [messengerConvId, setMessengerConvId] = useState<number | null>(null);
 
-      try {
-        const restCount = await fetchOnlineCount();
-        if (restCount > 0) {
-          setOnlineCount(restCount);
-        }
-      } catch (err) {
-        console.error('Failed to fetch online count:', err);
-      }
-    }
-    loadInitialData();
+  // Social feed state
+  const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [isLoadingFeed, setIsLoadingFeed] = useState(false);
+  const [friends, setFriends] = useState<UserProfile[]>([]);
 
-    const intervalId = setInterval(async () => {
-      try {
-        const restCount = await fetchOnlineCount();
-        if (restCount > 0) {
-          setOnlineCount(restCount);
-        }
-      } catch (err) {
-        // Silent catch
-      }
-    }, 5000);
+  // Messenger Floating Chat Docks state
+  const [activeChats, setActiveChats] = useState<ActiveChatWindow[]>([]);
+  const [incomingWsMessage, setIncomingWsMessage] = useState<ChatMessage | null>(null);
+  const [typingMap, setTypingMap] = useState<Record<number, boolean>>({});
 
-    return () => clearInterval(intervalId);
-  }, []);
+  // Notifications & Unread badge
+  const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
-  // WebSocket Real-time Guestbook Subscriptions (new_message, like_update, message_updated, message_deleted)
-  useEffect(() => {
-    const unsubscribe = guestbookWS.subscribe((wsEvent) => {
-      if (wsEvent.event === 'new_message') {
-        const entry = wsEvent.data;
-        const isSelf = isMyGuestbookMessage({
-          user_token: entry.user_token,
-          author_name: entry.author_name,
-          user_id: entry.user_id,
-        });
-
-        const newChatMessage: ChatMessage = {
-          id: entry.id,
-          sender: entry.author_name,
-          is_author: isSelf,
-          avatar: '',
-          avatar_color: entry.avatar_color,
-          content: entry.content,
-          timestamp: new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          type: 'guestbook',
-          likes_count: entry.likes_count,
-          user_token: entry.user_token,
-          user_id: entry.user_id,
-          image: entry.image,
-          is_edited: entry.is_edited,
-          edited_at: entry.edited_at,
-          expires_at: entry.expires_at,
-          author_role: entry.author_role || 'anonymous',
-        };
-
-        setTopicMessagesMap((prev) => {
-          const currentList = prev['guestbook'] || [];
-          if (currentList.some((m) => m.id === newChatMessage.id)) {
-            return prev;
-          }
-          return {
-            ...prev,
-            guestbook: [...currentList, newChatMessage],
-          };
-        });
-
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === newChatMessage.id)) {
-            return prev;
-          }
-          return [...prev, newChatMessage];
-        });
-      } else if (wsEvent.event === 'like_update') {
-        const updated = wsEvent.data;
-        const updateList = (prevList: ChatMessage[]) =>
-          prevList.map((m) => (m.id === updated.id ? { ...m, likes_count: updated.likes_count } : m));
-
-        setTopicMessagesMap((prev) => ({
-          ...prev,
-          guestbook: updateList(prev['guestbook'] || []),
-        }));
-        setMessages((prev) => updateList(prev));
-      } else if (wsEvent.event === 'message_updated') {
-        const updated = wsEvent.data;
-        const updateList = (prevList: ChatMessage[]) =>
-          prevList.map((m) =>
-            m.id === updated.id
-              ? {
-                  ...m,
-                  content: updated.content,
-                  is_edited: updated.is_edited,
-                  edited_at: updated.edited_at,
-                }
-              : m
-          );
-
-        setTopicMessagesMap((prev) => ({
-          ...prev,
-          guestbook: updateList(prev['guestbook'] || []),
-        }));
-        setMessages((prev) => updateList(prev));
-      } else if (wsEvent.event === 'message_deleted') {
-        const { id } = wsEvent.data;
-        const filterList = (prevList: ChatMessage[]) => prevList.filter((m) => m.id !== id);
-
-        setTopicMessagesMap((prev) => ({
-          ...prev,
-          guestbook: filterList(prev['guestbook'] || []),
-        }));
-        setMessages((prev) => filterList(prev));
-      } else if (wsEvent.event === 'online_count') {
-        if (typeof wsEvent.data?.count === 'number') {
-          setOnlineCount(wsEvent.data.count);
-        }
-      } else if (wsEvent.event === 'typing') {
-        const typingData = wsEvent.data;
-        const isSelf = isMyGuestbookMessage({
-          author_name: typingData.author_name,
-          user_token: typingData.user_token,
-          user_id: typingData.user_id,
-        });
-        if (!isSelf && typingData.author_name) {
-          setTypingUsers((prev) => ({
-            ...prev,
-            [typingData.author_name]: Date.now(),
-          }));
-        }
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [currentUserToken, currentUser]);
-
-  // Clear stale typing indicators
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setTypingUsers((prev) => {
-        const now = Date.now();
-        let changed = false;
-        const next = { ...prev };
-        for (const [name, time] of Object.entries(next)) {
-          if (now - time > 3000) {
-            delete next[name];
-            changed = true;
-          }
-        }
-        return changed ? next : prev;
-      });
-    }, 1000);
-    return () => clearInterval(intervalId);
-  }, []);
-
-  // Load or Restore Messages for Selected Topic
-  useEffect(() => {
-    async function loadMessages() {
-      if (!activeTopicId) return;
-
-      if (activeTopicId === 'guestbook') {
-        try {
-          const entries = await fetchGuestbookMessages();
-          const mappedMessages: ChatMessage[] = entries.map((entry) => ({
-            id: entry.id,
-            sender: entry.author_name,
-            is_author: isMyGuestbookMessage({
-              user_token: entry.user_token,
-              author_name: entry.author_name,
-              user_id: entry.user_id,
-            }),
-            avatar: '',
-            avatar_color: entry.avatar_color,
-            content: entry.content,
-            timestamp: new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            type: 'guestbook',
-            likes_count: entry.likes_count,
-            user_token: entry.user_token,
-            user_id: entry.user_id,
-            image: entry.image,
-            is_edited: entry.is_edited,
-            edited_at: entry.edited_at,
-            expires_at: entry.expires_at,
-            author_role: entry.author_role || 'anonymous',
-          }));
-
-          setTopicMessagesMap((prev) => ({
-            ...prev,
-            guestbook: mappedMessages,
-          }));
-          setMessages(mappedMessages);
-        } catch (err) {
-          console.error('Failed to fetch guestbook:', err);
-          if (topicMessagesMap['guestbook']) {
-            setMessages(topicMessagesMap['guestbook']);
-          }
-        }
-      } else {
-        if (topicMessagesMap[activeTopicId] && topicMessagesMap[activeTopicId].length > 0) {
-          setMessages(topicMessagesMap[activeTopicId]);
-        } else {
-          try {
-            setIsTyping(true);
-            const topicMsgs = await fetchTopicMessages(activeTopicId);
-            const formattedTopicMsgs = topicMsgs.map((m) => ({
-              ...m,
-              is_author: m.type === 'ai' ? true : false,
-            }));
-
-            setTopicMessagesMap((prev) => ({
-              ...prev,
-              [activeTopicId]: formattedTopicMsgs,
-            }));
-            setMessages(formattedTopicMsgs);
-          } catch (err) {
-            console.error('Failed to fetch topic messages:', err);
-          } finally {
-            setIsTyping(false);
-          }
-        }
-      }
-    }
-
-    loadMessages();
-  }, [activeTopicId, currentUserToken, currentUser]);
-
-  // Handle Guestbook Message Submit
-  const handleSendGuestbookMessage = async (authorName: string, content: string, avatarColor: string, image: string | null) => {
-    setIsSendingGuestbook(true);
+  // Load feed posts and friends
+  const loadFeed = useCallback(async () => {
+    setIsLoadingFeed(true);
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      const response = await fetch('/api/v1/guestbook', {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify({
-          author_name: authorName,
-          content: content,
-          avatar_color: avatarColor,
-          image: image,
-          user_token: currentUserToken,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Không thể gửi tin nhắn lưu bút');
-      }
-
-      const newEntry = await response.json();
-
-      const newChatMessage: ChatMessage = {
-        id: newEntry.id,
-        sender: newEntry.author_name,
-        is_author: true,
-        avatar: '',
-        avatar_color: newEntry.avatar_color,
-        content: newEntry.content,
-        timestamp: new Date(newEntry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        type: 'guestbook',
-        likes_count: newEntry.likes_count,
-        user_token: newEntry.user_token,
-        user_id: newEntry.user_id,
-        is_edited: newEntry.is_edited,
-        edited_at: newEntry.edited_at,
-        expires_at: newEntry.expires_at,
-        author_role: newEntry.author_role || 'anonymous',
-      };
-
-      setTopicMessagesMap((prev) => {
-        const list = prev['guestbook'] || [];
-        if (list.some((m) => m.id === newChatMessage.id)) return prev;
-        return {
-          ...prev,
-          guestbook: [...list, newChatMessage],
-        };
-      });
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === newChatMessage.id)) return prev;
-        return [...prev, newChatMessage];
-      });
+      const data = await socialApi.fetchPosts(0, 30);
+      setPosts(data);
     } catch (err) {
-      console.error('Failed to save guestbook message:', err);
-      throw err;
+      console.error(err);
     } finally {
-      setIsSendingGuestbook(false);
+      setIsLoadingFeed(false);
     }
-  };
+  }, []);
 
-  // Handle Admin Edit Message Modal Trigger
-  const handleEditGuestbookMessage = (msg: ChatMessage) => {
-    setEditingMessage(msg);
-  };
+  const loadFriends = useCallback(async () => {
+    if (!currentUser) return;
+    try {
+      const list = await socialApi.fetchFriends();
+      setFriends(list);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [currentUser]);
 
-  // Handle Admin Delete Message
-  const handleDeleteGuestbookMessage = async (messageId: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa tin nhắn này khỏi cơ sở dữ liệu?')) {
+  useEffect(() => {
+    loadFeed();
+    loadFriends();
+    if (currentUser) {
+      socialApi.fetchUnreadNotifCount().then(setUnreadNotifsCount).catch(() => {});
+      socialApi.fetchConversations().then((convs) => {
+        const unreadTotal = convs.reduce((acc, c) => acc + (c.unread_count || 0), 0);
+        setUnreadMessagesCount(unreadTotal);
+      }).catch(() => {});
+    }
+  }, [loadFeed, loadFriends, currentUser]);
+
+  // Realtime WebSocket Handlers
+  const { isConnected, onlineUserIds, sendEvent, sendTyping } = useWebSocket({
+    onChatMessage: (msg) => {
+      setIncomingWsMessage(msg);
+      setUnreadMessagesCount((prev) => prev + 1);
+    },
+    onPresenceUpdate: () => {
+      loadFriends();
+    },
+    onNotification: () => {
+      setUnreadNotifsCount((prev) => prev + 1);
+    },
+    onTypingIndicator: (data) => {
+      setTypingMap((prev) => ({
+        ...prev,
+        [data.conversation_id]: data.is_typing
+      }));
+    },
+    onNewPost: (newPost) => {
+      // Refresh feed
+      loadFeed();
+    }
+  });
+
+  // Launch or Open Direct Chat Window (Messenger Dock)
+  const handleOpenDirectChat = async (friendId: number, friendName: string, avatarUrl?: string) => {
+    if (!currentUser) {
+      handleOpenAuth('login');
       return;
     }
-
     try {
-      const res = await fetch(`/api/v1/guestbook/${messageId}`, {
-        method: 'DELETE',
-        credentials: 'include',
+      const conv = await socialApi.getOrCreateDirectConversation(friendId);
+      setActiveChats((prev) => {
+        const existing = prev.find((c) => c.conversationId === conv.id);
+        if (existing) {
+          return prev.map((c) =>
+            c.conversationId === conv.id ? { ...c, isMinimized: false } : c
+          );
+        }
+        return [
+          ...prev,
+          {
+            conversationId: conv.id,
+            title: friendName,
+            avatarUrl: avatarUrl,
+            isMinimized: false,
+            isGroup: false,
+            recipientId: friendId
+          }
+        ];
       });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        alert(errorData.detail || 'Không thể xóa tin nhắn.');
-        return;
-      }
-
-      // Optimistic state removal
-      const updateList = (prev: ChatMessage[]) => prev.filter((m) => m.id !== messageId);
-      setTopicMessagesMap((prev) => ({
-        ...prev,
-        guestbook: updateList(prev['guestbook'] || []),
-      }));
-      setMessages((prev) => updateList(prev));
     } catch (err) {
-      console.error('Delete failed:', err);
+      console.error('Lỗi khi mở cuộc trò chuyện:', err);
     }
   };
 
-  // Handle Guestbook Like Action
-  const handleLikeGuestbookMessage = async (messageId: number) => {
+  const handleCloseChat = (convId: number) => {
+    setActiveChats((prev) => prev.filter((c) => c.conversationId !== convId));
+  };
+
+  const handleToggleMinimizeChat = (convId: number) => {
+    setActiveChats((prev) =>
+      prev.map((c) =>
+        c.conversationId === convId ? { ...c, isMinimized: !c.isMinimized } : c
+      )
+    );
+  };
+
+  const handleExpandToFullscreen = (convId: number) => {
+    handleCloseChat(convId);
+    setMessengerConvId(convId);
+    setActiveTab('messenger');
+  };
+
+  const handleViewProfile = (userId: number | null) => {
+    if (userId) {
+      setSelectedProfileId(userId);
+      setActiveTab('profile');
+    }
+  };
+
+  // --- Legacy Guestbook Tab State ---
+  const [legacyTopics, setLegacyTopics] = useState<ChatTopic[]>([]);
+  const [activeTopicId, setActiveTopicId] = useState<string>('guestbook');
+  const [legacyMessages, setLegacyMessages] = useState<LegacyChatMessage[]>([]);
+  const [isLegacyTyping] = useState<boolean>(false);
+  const [isSendingGuestbook, setIsSendingGuestbook] = useState<boolean>(false);
+  const [editingMessage, setEditingMessage] = useState<LegacyChatMessage | null>(null);
+
+  const loadGuestbookEntries = useCallback(async () => {
     try {
-      const updated = await likeGuestbookMessage(messageId);
-      const updateList = (prev: ChatMessage[]) =>
-        prev.map((msg) => (msg.id === messageId ? { ...msg, likes_count: updated.likes_count } : msg));
-
-      setTopicMessagesMap((prev) => ({
-        ...prev,
-        guestbook: updateList(prev['guestbook'] || []),
+      const entries = await fetchGuestbookMessages();
+      const mapped: LegacyChatMessage[] = entries.map((entry) => ({
+        id: entry.id,
+        sender: entry.author_name,
+        is_author: currentUser ? entry.user_id === currentUser.id : false,
+        avatar: '',
+        avatar_color: entry.avatar_color,
+        content: entry.content,
+        timestamp: new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        type: 'guestbook',
+        likes_count: entry.likes_count,
+        user_token: entry.user_token,
+        image: entry.image,
+        user_id: entry.user_id,
+        is_edited: entry.is_edited,
+        edited_at: entry.edited_at,
+        expires_at: entry.expires_at,
       }));
-      setMessages((prev) => updateList(prev));
-    } catch (err) {
-      console.error('Like failed:', err);
+      setLegacyMessages(mapped);
+    } catch {
+      // ignore
     }
-  };
+  }, [currentUser]);
 
-  const handleLogout = () => {
-    authService.logout();
-    setCurrentUser(null);
-  };
-
-  const activeTopic = topics.find((t) => t.id === activeTopicId) || null;
+  useEffect(() => {
+    if (activeTab === 'guestbook') {
+      fetchTopics().then(setLegacyTopics).catch(() => {});
+      loadGuestbookEntries();
+    }
+  }, [activeTab, loadGuestbookEntries]);
 
   return (
     <div
-      data-theme={theme}
       data-testid="app-container"
-      className="flex h-[100dvh] w-full bg-[#07090E] light:bg-[#F8FAFC] text-zinc-100 light:text-slate-900 overflow-hidden font-sans transition-colors duration-200"
+      data-theme={theme}
+      className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200"
     >
-      <Sidebar
-        topics={topics}
-        activeTopicId={activeTopicId}
-        onSelectTopic={setActiveTopicId}
-        isOpenMobile={isMobileOpen}
-        onCloseMobile={() => setIsMobileOpen(false)}
-        onlineCount={onlineCount}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
-        user={currentUser}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+      {/* 1. Global Navigation Topbar */}
+      <Topbar
+        currentUser={currentUser}
+        activeTab={activeTab}
+        onSelectTab={(tab) => {
+          if (tab === 'profile') setSelectedProfileId(currentUser?.id || null);
+          setActiveTab(tab);
+        }}
+        onOpenAuth={handleOpenAuth}
         onLogout={handleLogout}
+        unreadNotifsCount={unreadNotifsCount}
+        unreadMessagesCount={unreadMessagesCount}
+        onOpenDirectChat={handleOpenDirectChat}
         onViewProfile={handleViewProfile}
+        isDark={theme === 'dark'}
+        onToggleTheme={handleToggleTheme}
       />
 
-      {viewMode === 'profile' ? (
-        <div className="flex-1 overflow-hidden relative">
-          <ProfilePage userId={profileUserId} onBack={() => setViewMode('chat')} />
-        </div>
-      ) : (
-        <ChatWindow
-          topic={activeTopic}
-          messages={messages}
-          isTyping={isTyping}
-          typingUsers={Object.keys(typingUsers)}
-          onOpenMobileSidebar={() => setIsMobileOpen(true)}
-          onSendGuestbookMessage={handleSendGuestbookMessage}
-          onLikeGuestbookMessage={handleLikeGuestbookMessage}
-          onEditGuestbookMessage={handleEditGuestbookMessage}
-          onDeleteGuestbookMessage={handleDeleteGuestbookMessage}
-          isSendingGuestbook={isSendingGuestbook}
-          theme={theme}
-          onToggleTheme={handleToggleTheme}
-          currentUser={currentUser}
-          onViewProfile={handleViewProfile}
-        />
-      )}
+      {/* 2. Main Page Content */}
+      <div className="flex-1 flex justify-center w-full">
+        {/* TAB 1: BẢNG TIN (SOCIAL FEED) */}
+        {activeTab === 'feed' && (
+          <div className="flex justify-between w-full max-w-7xl">
+            {/* Left Column: Navigation & Shortcuts */}
+            <LeftSidebar
+              currentUser={currentUser}
+              activeTab={activeTab}
+              onSelectTab={(tab) => {
+                if (tab === 'profile') setSelectedProfileId(currentUser?.id || null);
+                setActiveTab(tab);
+              }}
+              onOpenAuth={handleOpenAuth}
+            />
 
-      {/* Auth Modal */}
+            {/* Center Column: Stories, Create Post, Social Feed */}
+            <main className="flex-1 max-w-2xl px-4 py-4 flex flex-col gap-4">
+              <StoriesBar currentUser={currentUser} friends={friends} />
+
+              <CreatePostBox
+                currentUser={currentUser}
+                onPostCreated={(newPost) => setPosts((prev) => [newPost, ...prev])}
+                onOpenAuth={handleOpenAuth}
+              />
+
+              {/* Feed Stream */}
+              <div className="flex flex-col gap-4">
+                {isLoadingFeed ? (
+                  <div className="p-12 text-center text-sm text-slate-400">
+                    Đang tải bảng tin...
+                  </div>
+                ) : posts.length === 0 ? (
+                  <div className="p-12 text-center text-sm text-slate-400 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700">
+                    Chưa có bài viết nào. Hãy là người đầu tiên chia sẻ trạng thái!
+                  </div>
+                ) : (
+                  posts.map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      currentUser={currentUser}
+                      onPostDeleted={(postId) =>
+                        setPosts((prev) => prev.filter((p) => p.id !== postId))
+                      }
+                      onOpenAuth={handleOpenAuth}
+                      onViewProfile={handleViewProfile}
+                    />
+                  ))
+                )}
+              </div>
+            </main>
+
+            {/* Right Column: Online Contacts */}
+            <RightSidebar
+              friends={friends}
+              onlineUserIds={onlineUserIds}
+              onOpenDirectChat={handleOpenDirectChat}
+            />
+          </div>
+        )}
+
+        {/* TAB 2: BẠN BÈ (FRIENDS) */}
+        {activeTab === 'friends' && (
+          <FriendsTab
+            currentUser={currentUser}
+            onOpenDirectChat={handleOpenDirectChat}
+            onViewProfile={handleViewProfile}
+            onOpenAuth={handleOpenAuth}
+          />
+        )}
+
+        {/* TAB 3: MESSENGER (FULLSCREEN MESSENGER WORKSPACE) */}
+        {activeTab === 'messenger' && (
+          <MessengerPage
+            currentUser={currentUser}
+            selectedConversationId={messengerConvId}
+            onSelectConversation={(id) => setMessengerConvId(id)}
+            incomingMessage={incomingWsMessage}
+            onSendTyping={sendTyping}
+            typingMap={typingMap}
+            onOpenAuth={handleOpenAuth}
+          />
+        )}
+
+        {/* TAB 4: SỔ LƯU BÚT PORTFOLIO (LEGACY GUESTBOOK) */}
+        {activeTab === 'guestbook' && (
+          <div className="flex-1 max-w-6xl flex h-[calc(100vh-3.5rem)] overflow-hidden">
+            <Sidebar
+              topics={legacyTopics}
+              activeTopicId={activeTopicId}
+              onSelectTopic={(id) => {
+                setActiveTopicId(id);
+                loadGuestbookEntries();
+              }}
+              onlineCount={onlineUserIds.length || 1}
+              isOpenMobile={false}
+              onCloseMobile={() => {}}
+              user={currentUser}
+              onOpenAuthModal={() => handleOpenAuth('login')}
+              onLogout={handleLogout}
+              onViewProfile={handleViewProfile}
+              theme={theme}
+              onToggleTheme={handleToggleTheme}
+            />
+            <main className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800">
+              <ChatWindow
+                topic={legacyTopics.find((t) => t.id === activeTopicId) || null}
+                messages={legacyMessages}
+                isTyping={isLegacyTyping}
+                onOpenMobileSidebar={() => {}}
+                onSendGuestbookMessage={async (name: string, content: string, color: string, image: string | null) => {
+                  setIsSendingGuestbook(true);
+                  try {
+                    const token = getOrCreateUserToken();
+                    const authorName = currentUser?.display_name || currentUser?.username || name || 'Khách truy cập';
+                    await postGuestbookMessage({
+                      author_name: authorName,
+                      content,
+                      avatar_color: color || '#2563EB',
+                      user_token: token,
+                      image: image || undefined,
+                    });
+                    await loadGuestbookEntries();
+                  } finally {
+                    setIsSendingGuestbook(false);
+                  }
+                }}
+                onLikeGuestbookMessage={async (id: number) => {
+                  const updated = await likeGuestbookMessage(id);
+                  setLegacyMessages((prev) =>
+                    prev.map((m) => (m.id === id ? { ...m, likes_count: updated.likes_count } : m))
+                  );
+                }}
+                onEditGuestbookMessage={(m: LegacyChatMessage) => setEditingMessage(m)}
+                isSendingGuestbook={isSendingGuestbook}
+                currentUser={currentUser}
+                onViewProfile={handleViewProfile}
+              />
+            </main>
+          </div>
+        )}
+
+        {/* TAB 5: TRANG CÁ NHÂN (PROFILE PAGE) */}
+        {activeTab === 'profile' && (
+          <div className="flex-1 w-full max-w-4xl py-4 px-2">
+            <ProfilePage
+              userId={selectedProfileId}
+              onBack={() => setActiveTab('feed')}
+              onOpenDirectChat={handleOpenDirectChat}
+              onOpenAuth={handleOpenAuth}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* 3. Floating Messenger Chat Docks (Bottom Right) */}
+      <FloatingChatDock
+        activeChats={activeChats}
+        currentUser={currentUser}
+        onClose={handleCloseChat}
+        onToggleMinimize={handleToggleMinimizeChat}
+        onExpandToFullscreen={handleExpandToFullscreen}
+        onSendTyping={sendTyping}
+        incomingMessage={incomingWsMessage}
+        typingMap={typingMap}
+      />
+
+      {/* 4. Auth Modal (Login / Register) */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        onSuccess={(user) => setCurrentUser(user)}
-      />
-
-      {/* Admin Edit Message Modal */}
-      <EditMessageModal
-        message={editingMessage}
-        isOpen={!!editingMessage}
-        onClose={() => setEditingMessage(null)}
-        onSuccess={({ id, content, is_edited }) => {
-          const updateList = (prev: ChatMessage[]) =>
-            prev.map((m) => (m.id === id ? { ...m, content, is_edited } : m));
-          setTopicMessagesMap((prev) => ({
-            ...prev,
-            guestbook: updateList(prev['guestbook'] || []),
-          }));
-          setMessages((prev) => updateList(prev));
+        onSuccess={() => {
+          const user = authService.getUser();
+          setCurrentUser(user);
+          setIsAuthModalOpen(false);
+          loadFeed();
+          loadFriends();
         }}
       />
+
+      {/* 5. Legacy Edit Message Modal */}
+      {editingMessage && (
+        <EditMessageModal
+          isOpen={true}
+          onClose={() => setEditingMessage(null)}
+          message={editingMessage}
+          onSuccess={() => {
+            setEditingMessage(null);
+            loadGuestbookEntries();
+          }}
+        />
+      )}
     </div>
   );
 };

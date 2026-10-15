@@ -61,6 +61,7 @@ export async function postGuestbookMessage(payload: {
   content: string;
   avatar_color: string;
   user_token?: string;
+  image?: string;
 }): Promise<GuestbookEntry> {
   const token = payload.user_token || getOrCreateUserToken();
   const res = await fetch(`${API_BASE_URL}/guestbook`, {
