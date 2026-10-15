@@ -228,6 +228,7 @@ export const App: React.FC = () => {
   const [isLegacyTyping] = useState<boolean>(false);
   const [isSendingGuestbook, setIsSendingGuestbook] = useState<boolean>(false);
   const [editingMessage, setEditingMessage] = useState<LegacyChatMessage | null>(null);
+  const [isGuestbookMobileOpen, setIsGuestbookMobileOpen] = useState<boolean>(false);
 
   const loadGuestbookEntries = useCallback(async () => {
     try {
@@ -287,7 +288,9 @@ export const App: React.FC = () => {
       />
 
       {/* 2. Main Page Content */}
-      <div className="flex-1 flex justify-center w-full pb-20 md:pb-6">
+      <div className={`flex-1 flex justify-center w-full ${
+        activeTab === 'messenger' || activeTab === 'guestbook' ? 'pb-0' : 'pb-20 md:pb-6'
+      }`}>
         {/* TAB 1: BẢNG TIN (SOCIAL FEED) */}
         {activeTab === 'feed' && (
           <div className="flex justify-between w-full max-w-7xl">
@@ -382,8 +385,8 @@ export const App: React.FC = () => {
                 loadGuestbookEntries();
               }}
               onlineCount={onlineUserIds.length || 1}
-              isOpenMobile={false}
-              onCloseMobile={() => {}}
+              isOpenMobile={isGuestbookMobileOpen}
+              onCloseMobile={() => setIsGuestbookMobileOpen(false)}
               user={currentUser}
               onOpenAuthModal={() => handleOpenAuth('login')}
               onLogout={handleLogout}
@@ -396,7 +399,7 @@ export const App: React.FC = () => {
                 topic={legacyTopics.find((t) => t.id === activeTopicId) || null}
                 messages={legacyMessages}
                 isTyping={isLegacyTyping}
-                onOpenMobileSidebar={() => {}}
+                onOpenMobileSidebar={() => setIsGuestbookMobileOpen(true)}
                 onSendGuestbookMessage={async (name: string, content: string, color: string, image: string | null) => {
                   setIsSendingGuestbook(true);
                   try {

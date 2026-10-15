@@ -38,9 +38,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
+      {/* Mobile Drawer Backdrop */}
+      {isOpenMobile && (
+        <div
+          data-testid="sidebar-mobile-backdrop"
+          onClick={onCloseMobile}
+          className="fixed inset-0 top-14 bg-black/50 backdrop-blur-xs z-30 lg:hidden animate-in fade-in duration-200"
+        />
+      )}
+
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-40 w-80 glass-sidebar flex flex-col transition-transform duration-300 ${
-          isOpenMobile ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        className={`fixed lg:static top-14 lg:top-0 bottom-0 lg:bottom-auto left-0 z-30 lg:z-auto w-80 max-w-[85vw] lg:w-80 lg:max-w-none h-[calc(100vh-3.5rem)] lg:h-full glass-sidebar flex flex-col transition-transform duration-300 ${
+          isOpenMobile ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         {/* Sidebar Header: Author Bio Doppelrand Card */}
