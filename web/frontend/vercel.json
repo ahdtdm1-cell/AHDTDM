@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://chat-2.taild6d848.ts.net/api/:path*"
+      "destination": "https://chat.tail97b77a.ts.net/api/:path*"
     },
     {
       "source": "/uploads/:path*",
-      "destination": "https://chat-2.taild6d848.ts.net/uploads/:path*"
+      "destination": "https://chat.tail97b77a.ts.net/uploads/:path*"
     }
   ]
 }

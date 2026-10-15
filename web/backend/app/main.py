@@ -91,8 +91,8 @@ async def security_headers_middleware(request: Request, call_next):
 
 
 DEFAULT_ALLOWED_ORIGINS = [
-    "https://chat.taild6d848.ts.net",
-    "https://chat-ts.taild6d848.ts.net",
+    "https://chat.tail97b77a.ts.net",
+    "https://ahdtdm.vercel.app",
     "http://localhost:5173",
     "http://localhost:3000",
     "http://127.0.0.1:5173"
