@@ -114,7 +114,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         }`}>
           <BookOpen className="w-4 h-4" />
         </div>
-        Sổ lưu bút Portfolio
+        Sổ lưu bút
       </button>
 
       <div className="border-t border-slate-200/80 dark:border-white/10 my-2" />
@@ -143,7 +143,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
       {/* Small footer */}
       <div className="mt-auto pt-4 text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed px-2">
-        <p>Quyền riêng tư · Điều khoản · Trợ giúp · SocialChat © 2026</p>
+        <p>Quyền riêng tư · Điều khoản · Trợ giúp · Sobook © 2026</p>
       </div>
     </aside>
   );

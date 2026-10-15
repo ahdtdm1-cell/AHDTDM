@@ -33,7 +33,7 @@ const mockPost: SocialPost = {
     created_at: new Date().toISOString(),
     avatar_url: 'https://example.com/avatar.jpg'
   },
-  content: 'Xin chào cộng đồng mạng xã hội SocialChat!',
+  content: 'Xin chào cộng đồng mạng xã hội Sobook!',
   media_urls: null,
   privacy: 'public',
   created_at: new Date().toISOString(),
@@ -66,7 +66,7 @@ describe('Social & Messenger Components', () => {
         />
       );
 
-      expect(screen.getByText('SocialChat')).toBeInTheDocument();
+      expect(screen.getByText('Sobook')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('Tìm kiếm bạn bè...')).toBeInTheDocument();
       expect(screen.getByTitle('Bảng tin')).toBeInTheDocument();
       expect(screen.getByTitle('Bạn bè')).toBeInTheDocument();
@@ -114,7 +114,7 @@ describe('Social & Messenger Components', () => {
       );
 
       expect(screen.getByText('Test User')).toBeInTheDocument();
-      expect(screen.getByText('Xin chào cộng đồng mạng xã hội SocialChat!')).toBeInTheDocument();
+      expect(screen.getByText('Xin chào cộng đồng mạng xã hội Sobook!')).toBeInTheDocument();
       expect(screen.getByText('5')).toBeInTheDocument(); // total likes/reactions count
       expect(screen.getByText(/2 bình luận/i)).toBeInTheDocument();
     });

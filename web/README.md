@@ -1,9 +1,9 @@
-# Chat-style Portfolio & Guestbook
+# Sobook - Modern Social Network & Realtime Chat
 
 ![Project Banner](https://img.shields.io/badge/Stack-React%20%7C%20FastAPI%20%7C%20SQLServer%20%7C%20Tailscale-blue?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-Một trang web Portfolio cá nhân kết hợp sổ lưu bút (Guestbook) công cộng mang giao diện ứng dụng nhắn tin tương tác trực quan (tương tự Apple iMessage / Telegram / Zalo). Dự án giúp thay thế cách trình bày thông tin tĩnh truyền thống bằng trải nghiệm hội thoại sinh động, giúp người xem khám phá thông tin tác giả (**[Nguyễn Minh Trí / Johnyyd](https://github.com/Johnyyd)**) và các repository mã nguồn mở nổi bật một cách thú vị nhất.
+Một nền tảng mạng xã hội kết hợp trò chuyện thời gian thực hiện đại, gọn gàng, tinh tế và bảo mật, mang giao diện lấy cảm hứng từ Apple Design. Nền tảng hỗ trợ bảng tin đa phương tiện, câu chuyện (Stories), tương tác biểu cảm, nhắn tin trực tiếp và nhóm chat lưu bút cộng đồng.
 
 ---
 
@@ -43,8 +43,8 @@ Một trang web Portfolio cá nhân kết hợp sổ lưu bút (Guestbook) công
 
 ### Networking & Public URL (`/tailscale`):
 
-- Triển khai giải pháp từ repository **[Johnyyd/tailscale_public_url](https://github.com/Johnyyd/tailscale_public_url)**.
-- 2 Container Tailscale Proxy độc lập (`tailscale-frontend` và `tailscale-backend`) public các dịch vụ nội bộ ra Internet an toàn thông qua **Tailscale Funnel / Serve** mà không cần mở port trên router.
+- Triển khai giải pháp Tailscale Public Proxy độc lập.
+- 2 Container Tailscale Proxy (`tailscale-frontend` và `tailscale-backend`) public các dịch vụ nội bộ ra Internet an toàn thông qua **Tailscale Funnel / Serve** mà không cần mở port trên router.
 
 ---
 
@@ -118,4 +118,4 @@ Internet Public URL (https://<tailscale-funnel-domain>)
 
 ## 📄 Giấy Phép (License)
 
-Phát triển bởi **[Nguyễn Minh Trí (Johnyyd)](https://github.com/Johnyyd)**. Phát hành theo giấy phép MIT.
+Dự án phát hành theo giấy phép mã nguồn mở MIT.

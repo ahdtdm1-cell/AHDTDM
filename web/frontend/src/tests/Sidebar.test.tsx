@@ -8,9 +8,9 @@ describe('Sidebar Component', () => {
   const mockTopics: ChatTopic[] = [
     {
       id: 'about',
-      title: '👤 Giới thiệu tác giả',
-      subtitle: 'Bio Johnyyd',
-      avatar: 'https://github.com/Johnyyd.png',
+      title: '👤 Giới thiệu Sobook',
+      subtitle: 'Thông tin hệ thống',
+      avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=sobook',
       type: 'portfolio',
       unread: 0,
       is_online: true,
@@ -40,8 +40,8 @@ describe('Sidebar Component', () => {
       />
     );
 
-    expect(screen.getByText('Nguyễn Minh Trí')).toBeInTheDocument();
-    expect(screen.getByText('👤 Giới thiệu tác giả')).toBeInTheDocument();
+    expect(screen.getByText('Sobook')).toBeInTheDocument();
+    expect(screen.getByText('👤 Giới thiệu Sobook')).toBeInTheDocument();
     expect(screen.getByText('💬 Public Guestbook')).toBeInTheDocument();
   });
 

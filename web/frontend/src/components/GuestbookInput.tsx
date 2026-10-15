@@ -102,7 +102,7 @@ export const GuestbookInput: React.FC<GuestbookInputProps> = ({
       const now = Date.now();
       if (now - lastTypingTimeRef.current > 2000) { // throttle 2 seconds
         lastTypingTimeRef.current = now;
-        const nameToUse = currentUser ? currentUser.username : (authorName.trim() || 'Khách');
+        const nameToUse = currentUser ? currentUser.username : (authorName.trim() || 'Người dùng');
         try {
           guestbookWS.send(JSON.stringify({
             event: 'typing',
@@ -187,14 +187,14 @@ export const GuestbookInput: React.FC<GuestbookInputProps> = ({
                 <UserCheck className="w-3.5 h-3.5 text-blue-400" />
               )}
               <span className="font-semibold text-white">{currentUser.username}</span>
-              <span className="text-[10px] text-blue-400/80">({currentUser.role === 'admin' ? 'Admin' : 'Thành viên'} - Lưu trữ vĩnh viễn)</span>
+              <span className="text-[10px] text-blue-400/80">({currentUser.role === 'admin' ? 'Admin' : 'Thành viên'})</span>
             </div>
           ) : (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-950/80 light:bg-white border border-zinc-800/80 light:border-slate-300 text-xs text-zinc-300 light:text-slate-800 w-full sm:w-72 shadow-inner light:shadow-none">
               <UserIcon className="w-4 h-4 text-indigo-400 light:text-indigo-600 flex-shrink-0" />
               <input
                 type="text"
-                placeholder="Tên lưu bút vãng lai (VD: Anh Tuấn)"
+                placeholder="Nhập tên hiển thị..."
                 value={authorName}
                 onChange={(e) => setAuthorName(e.target.value)}
                 className="bg-transparent border-none outline-none text-xs text-zinc-100 light:text-slate-900 placeholder-zinc-500 light:placeholder-slate-400 w-full font-medium tracking-tight"
@@ -204,12 +204,6 @@ export const GuestbookInput: React.FC<GuestbookInputProps> = ({
           )}
 
           <div className="flex items-center gap-2">
-            {!currentUser && (
-              <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-zinc-500 font-mono">
-                <Clock className="w-3 h-3 text-amber-500" />
-                Vãng lai tự xóa sau 30 ngày
-              </span>
-            )}
             <button
               type="button"
               onClick={() => setShowColorPicker(!showColorPicker)}

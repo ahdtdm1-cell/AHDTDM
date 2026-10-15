@@ -8,34 +8,34 @@ describe('MessageBubble Component', () => {
   it('renders author message correctly with markdown bold', () => {
     const message: ChatMessage = {
       id: 'm1',
-      sender: 'Johnyyd',
+      sender: 'Admin',
       is_author: true,
-      avatar: 'https://github.com/Johnyyd.png',
-      content: '👋 Xin chào! Mình là **Nguyễn Minh Trí**',
+      avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=admin',
+      content: '👋 Xin chào! Chào mừng đến với **Sobook**',
       timestamp: '10:00 AM',
       type: 'text',
     };
 
     render(<MessageBubble message={message} />);
-    expect(screen.getByText('Johnyyd')).toBeInTheDocument();
-    expect(screen.getByText('Nguyễn Minh Trí')).toBeInTheDocument();
+    expect(screen.getByText('Admin')).toBeInTheDocument();
+    expect(screen.getByText('Sobook')).toBeInTheDocument();
   });
 
   it('renders guest message with color avatar', () => {
     const message: ChatMessage = {
       id: 5,
-      sender: 'Khách Ghé Thăm',
+      sender: 'Thành viên Ghé Thăm',
       is_author: false,
       avatar: '',
       avatar_color: '#10B981',
-      content: 'Website nhắn tin quá đẹp!',
+      content: 'Mạng xã hội Sobook quá đẹp!',
       timestamp: '10:05 AM',
       type: 'guestbook',
       likes_count: 2,
     };
 
     render(<MessageBubble message={message} />);
-    expect(screen.getByText('Khách Ghé Thăm')).toBeInTheDocument();
-    expect(screen.getByText('Website nhắn tin quá đẹp!')).toBeInTheDocument();
+    expect(screen.getByText('Thành viên Ghé Thăm')).toBeInTheDocument();
+    expect(screen.getByText('Mạng xã hội Sobook quá đẹp!')).toBeInTheDocument();
   });
 });

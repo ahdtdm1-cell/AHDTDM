@@ -2,7 +2,7 @@ PORTFOLIO_TOPICS = [
     {
         "id": "guestbook",
         "title": "💬 Public Guestbook",
-        "subtitle": " Gửi tin nhắn đến tác giả & mọi người",
+        "subtitle": "Gửi tin nhắn đến cộng đồng & mọi người",
         "avatar": "👥",
         "type": "guestbook",
         "unread": 0,

@@ -121,7 +121,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
             <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
           </div>
-          <span className="hidden sm:inline font-bold">SocialChat</span>
+          <span className="hidden sm:inline font-bold">Sobook</span>
         </button>
 
         {/* Search bar */}

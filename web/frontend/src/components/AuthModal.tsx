@@ -285,12 +285,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             )}
           </button>
         </form>
-
-        {/* Footer Retention Note */}
-        <div className="mt-6 pt-4 border-t border-slate-100 dark:border-white/5 text-center text-xs text-slate-500 dark:text-slate-400">
-          💡 <span className="text-slate-700 dark:text-slate-300 font-medium">Quy định lưu giữ:</span> Thành viên được lưu vĩnh viễn. Khách vãng lai tự động bị xóa sau 30 ngày.
-        </div>
-
       </div>
     </div>
   );

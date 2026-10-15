@@ -64,7 +64,7 @@ export const FriendsTab: React.FC<FriendsTabProps> = ({
           <Users className="w-8 h-8" />
         </div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
-          Kết nối với bạn bè trên SocialChat
+          Kết nối với bạn bè trên Sobook
         </h2>
         <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-6 leading-relaxed">
           Đăng nhập để xem danh sách bạn bè, gửi lời mời kết bạn và cùng nhau trò chuyện theo thời gian thực.

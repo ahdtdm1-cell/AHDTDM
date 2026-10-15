@@ -23,7 +23,7 @@ describe('Frontend API Service', () => {
 
   it('postGuestbookMessage sends POST request with correct payload including user_token', async () => {
     const payload = {
-      author_name: 'Khách Hàng A',
+      author_name: 'Thành viên A',
       content: 'Tin nhắn chạy thử',
       avatar_color: '#2563EB',
     };
@@ -37,10 +37,10 @@ describe('Frontend API Service', () => {
 
     const result = await postGuestbookMessage(payload);
     expect(result.id).toBe(10);
-    expect(result.author_name).toBe('Khách Hàng A');
+    expect(result.author_name).toBe('Thành viên A');
     expect(fetch).toHaveBeenCalledWith('/api/guestbook', expect.objectContaining({
       method: 'POST',
-      body: expect.stringContaining('"author_name":"Khách Hàng A"'),
+      body: expect.stringContaining('"author_name":"Thành viên A"'),
     }));
   });
 });

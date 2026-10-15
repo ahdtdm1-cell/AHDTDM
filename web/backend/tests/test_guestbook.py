@@ -13,7 +13,7 @@ def test_guestbook_full_flow():
     # 2. Post new guestbook message
     payload = {
         "author_name": "Nguyễn Văn A",
-        "content": "Chào Johnyyd! Giao diện chat portfolio này quá đỉnh!",
+        "content": "Chào Sobook! Giao diện mạng xã hội này quá đỉnh!",
         "avatar_color": "#2563EB"
     }
     create_res = client.post("/api/guestbook", json=payload)

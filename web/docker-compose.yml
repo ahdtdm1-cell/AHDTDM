@@ -39,7 +39,7 @@ services:
     networks:
       - chat_network
 
-  # Tailscale Public Proxy for Frontend (Johnyyd/tailscale_public_url pattern)
+  # Tailscale Public Proxy for Frontend
   tailscale-frontend:
     build:
       context: ./tailscale
@@ -61,7 +61,7 @@ services:
     networks:
       - chat_network
 
-  # Tailscale Public Proxy for Backend (Johnyyd/tailscale_public_url pattern)
+  # Tailscale Public Proxy for Backend
   tailscale-backend:
     build:
       context: ./tailscale

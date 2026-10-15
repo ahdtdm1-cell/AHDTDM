@@ -59,9 +59,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     />
                   </div>
                 ) : (
-                  <div className="p-0.5 rounded-2xl bg-gradient-to-b from-indigo-500/40 to-zinc-800 border border-indigo-500/30">
-                    <div className="w-10 h-10 rounded-[calc(1rem-0.125rem)] flex items-center justify-center bg-indigo-500 text-white font-bold text-xs">
-                      {(user?.display_name?.charAt(0) || user?.username?.charAt(0) || 'U').toUpperCase()}
+                  <div className="p-0.5 rounded-2xl bg-gradient-to-b from-blue-500/40 to-indigo-800 border border-blue-500/30">
+                    <div className="w-10 h-10 rounded-[calc(1rem-0.125rem)] flex items-center justify-center bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-sm shadow-sm">
+                      {user ? (user.display_name?.charAt(0) || user.username?.charAt(0) || 'U').toUpperCase() : 'S'}
                     </div>
                   </div>
                 )}
@@ -71,12 +71,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1">
-                  <h2 className="font-bold text-zinc-100 light:text-slate-900 text-sm tracking-tight truncate">
-                    {user ? (user.display_name || user.username || 'User') : 'Nguyễn Minh Trí'}
+                  <h2 className="font-bold text-slate-900 dark:text-zinc-100 text-sm tracking-tight truncate">
+                    {user ? (user.display_name || user.username || 'User') : 'Sobook'}
                   </h2>
                 </div>
-                <p className="text-[11px] text-zinc-400 light:text-slate-500 font-medium tracking-tight truncate">
-                  {user ? (user.bio || '') : '@Johnyyd · Fullstack & DevOps'}
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400 font-medium tracking-tight truncate">
+                  {user ? (user.bio || '') : 'Cộng đồng kết nối & chia sẻ'}
                 </p>
               </div>
             </div>
@@ -153,18 +153,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
             </div>
           ) : (
-            <div className="p-2.5 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <UserIcon className="w-4 h-4 text-zinc-400" />
-                <div className="text-[11px] text-zinc-400">
-                  <span className="text-zinc-200 font-medium">Khách (Vãng lai)</span>
-                  <p className="text-[9px] text-zinc-500">Tin nhắn tự xóa sau 30 ngày</p>
+            <div className="p-3 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-between gap-2 shadow-xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                  <UserIcon className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block truncate">Tài khoản Sobook</span>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Đăng nhập để lưu tin nhắn</p>
                 </div>
               </div>
               {onOpenAuthModal && (
                 <button
                   onClick={onOpenAuthModal}
-                  className="py-1 px-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md flex items-center gap-1 transition-all cursor-pointer"
+                  className="py-1.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all press-tactile cursor-pointer shrink-0"
                 >
                   <LogIn className="w-3.5 h-3.5" />
                   <span>Đăng nhập</span>

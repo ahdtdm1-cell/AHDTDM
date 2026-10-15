@@ -401,7 +401,7 @@ export const App: React.FC = () => {
                   setIsSendingGuestbook(true);
                   try {
                     const token = getOrCreateUserToken();
-                    const authorName = currentUser?.display_name || currentUser?.username || name || 'Khách truy cập';
+                    const authorName = currentUser?.display_name || currentUser?.username || name || 'Thành viên Sobook';
                     await postGuestbookMessage({
                       author_name: authorName,
                       content,

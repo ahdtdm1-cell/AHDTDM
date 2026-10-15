@@ -81,12 +81,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         </span>
       );
     }
-    return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-medium rounded-md bg-zinc-700/40 text-zinc-400 border border-zinc-700/50" title="Tin nhắn vãng lai - Tự động xóa sau 30 ngày">
-        <Clock className="w-2.5 h-2.5" />
-        Xóa sau 30d
-      </span>
-    );
+    return null;
   };
 
   return (
