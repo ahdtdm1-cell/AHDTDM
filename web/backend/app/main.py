@@ -11,7 +11,7 @@ from app.config import settings
 from app.database import engine, Base, SessionLocal, ensure_schema_columns
 from app.models import User
 from app.security import get_password_hash
-from app.routers import health, guestbook, topics, auth, users, posts, friends, notifications
+from app.routers import health, guestbook, topics, auth, users, posts, friends, notifications, messages
 from app.crypto import router as crypto_router
 from app.captcha import router as captcha_router
 from app.services.cleanup import cleanup_loop_task
@@ -135,6 +135,7 @@ for prefix in [settings.API_PREFIX, f"{settings.API_PREFIX}/v1"]:
     app.include_router(posts.router, prefix=prefix)
     app.include_router(friends.router, prefix=prefix)
     app.include_router(notifications.router, prefix=prefix)
+    app.include_router(messages.router, prefix=prefix)
 
 # Realtime WebSocket Gateway for Messenger & Notifications
 from fastapi import WebSocket, WebSocketDisconnect
