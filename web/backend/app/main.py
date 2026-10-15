@@ -107,7 +107,7 @@ elif allowed_origins_env == "*":
     allow_origin_regex = None
 else:
     allowed_origins = DEFAULT_ALLOWED_ORIGINS
-    allow_origin_regex = r"^https://.*\.ts\.net$"
+    allow_origin_regex = r"^(https://.*\.ts\.net|https://.*\.vercel\.app)$"
 
 app.add_middleware(
     CORSMiddleware,

@@ -43,8 +43,17 @@ class GuestbookWebSocketClient {
       return;
     }
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/api/guestbook/ws?client_id=${this.clientId}`;
+    let wsUrl: string;
+    const apiBase = import.meta.env.VITE_API_BASE_URL;
+    if (apiBase && (apiBase.startsWith('http://') || apiBase.startsWith('https://'))) {
+      const url = new URL(apiBase);
+      const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+      const basePath = url.pathname.replace(/\/+$/, '');
+      wsUrl = `${protocol}//${url.host}${basePath}/guestbook/ws?client_id=${this.clientId}`;
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsUrl = `${protocol}//${window.location.host}/api/guestbook/ws?client_id=${this.clientId}`;
+    }
 
     try {
       this.socket = new WebSocket(wsUrl);

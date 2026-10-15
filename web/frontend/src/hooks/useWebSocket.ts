@@ -24,9 +24,17 @@ export function useWebSocket(handlers: WebSocketEventHandlers) {
     if (!user) return;
 
     // Build ws protocol and url
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/api/ws`;
+    let wsUrl: string;
+    const apiBase = import.meta.env.VITE_API_BASE_URL;
+    if (apiBase && (apiBase.startsWith('http://') || apiBase.startsWith('https://'))) {
+      const url = new URL(apiBase);
+      const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+      const basePath = url.pathname.replace(/\/+$/, '');
+      wsUrl = `${protocol}//${url.host}${basePath}/ws`;
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsUrl = `${protocol}//${window.location.host}/api/ws`;
+    }
 
     try {
       const ws = new WebSocket(wsUrl);

@@ -9,6 +9,8 @@ services:
     restart: always
     cap_drop:
       - ALL
+    extra_hosts:
+      - "backend:192.168.100.185"
     ports:
       - "5173:8080"
     environment:
@@ -68,6 +70,8 @@ services:
     container_name: chat_ts
     hostname: chat-ts
     restart: always
+    extra_hosts:
+      - "backend:192.168.100.185"
     environment:
       - TS_AUTHKEY=tskey-auth-kMvFmVxPpg11CNTRL-dWkCF7p8tLFLXHhgSqzsKFc5bp7aHEYf
       - TS_STATE_DIR=/var/lib/tailscale
