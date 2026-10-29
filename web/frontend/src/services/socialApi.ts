@@ -8,11 +8,13 @@ const API_BASE = '/api';
 
 export const socialApi = {
   // --- Posts ---
-  async fetchPosts(skip = 0, limit = 20, userId?: number): Promise<SocialPost[]> {
-    const url = new URL(`${window.location.origin}${API_BASE}/posts`);
+  async fetchPosts(skip = 0, limit = 20, userId?: number, cursorId?: number): Promise<SocialPost[]> {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+    const url = new URL(`${origin}${API_BASE}/posts`);
     url.searchParams.set('skip', String(skip));
     url.searchParams.set('limit', String(limit));
     if (userId) url.searchParams.set('user_id', String(userId));
+    if (cursorId) url.searchParams.set('cursor_id', String(cursorId));
 
     const res = await fetch(url.toString(), { credentials: 'include' });
     if (!res.ok) throw new Error('Không thể tải bài viết.');
@@ -162,8 +164,12 @@ export const socialApi = {
     return res.json();
   },
 
-  async fetchMessages(conversationId: number, skip = 0, limit = 50): Promise<ChatMessage[]> {
-    const res = await fetch(`${API_BASE}/conversations/${conversationId}/messages?skip=${skip}&limit=${limit}`, {
+  async fetchMessages(conversationId: number, skip = 0, limit = 50, beforeId?: number): Promise<ChatMessage[]> {
+    let endpoint = `${API_BASE}/conversations/${conversationId}/messages?skip=${skip}&limit=${limit}`;
+    if (beforeId) {
+      endpoint += `&before_id=${beforeId}`;
+    }
+    const res = await fetch(endpoint, {
       credentials: 'include'
     });
     if (!res.ok) return [];

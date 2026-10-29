@@ -11,6 +11,7 @@ from app.models import User
 from app.schemas import UserResponse, PublicUserProfileResponse, UserProfileUpdate, UserPasswordUpdate, EncryptedPayload
 from app.crypto import decrypt_payload
 from app.security import get_current_user, verify_password, get_password_hash
+from app.services.image_optimizer import process_and_save_image
 from pydantic import ValidationError
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -138,34 +139,17 @@ def upload_avatar(
             detail="File size too large. Maximum allowed size is 5MB."
         )
 
-    # Create upload directory if it doesn't exist
-    upload_dir = Path("uploads/avatars")
-    upload_dir.mkdir(parents=True, exist_ok=True)
+    # Process & optimize avatar image
+    contents = file.file.read()
+    file.file.close()
 
-    # Map content_type to extension
-    ext_map = {
-        "image/jpeg": "jpg",
-        "image/png": "png",
-        "image/gif": "gif",
-        "image/webp": "webp"
-    }
-    file_extension = ext_map.get(file.content_type, "jpg")
-    
-    import uuid
-    unique_filename = f"{uuid.uuid4()}.{file_extension}"
-    file_path = upload_dir / unique_filename
-
-    # Save file
-    try:
-        with file_path.open("wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-    except Exception:
+    if len(contents) > max_size:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Could not save uploaded file."
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File size too large. Maximum allowed size is 5MB."
         )
-    finally:
-        file.file.close()
+    
+    unique_filename = process_and_save_image(contents, "uploads/avatars", prefix="avatar", is_avatar=True)
 
     # Update user's avatar_url in database
     avatar_url = f"/uploads/avatars/{unique_filename}"
@@ -205,31 +189,16 @@ def upload_cover(
             detail="File size too large. Maximum allowed size is 5MB."
         )
 
-    upload_dir = Path("uploads/covers")
-    upload_dir.mkdir(parents=True, exist_ok=True)
+    contents = file.file.read()
+    file.file.close()
 
-    ext_map = {
-        "image/jpeg": "jpg",
-        "image/png": "png",
-        "image/gif": "gif",
-        "image/webp": "webp"
-    }
-    file_extension = ext_map.get(file.content_type, "jpg")
-    
-    import uuid
-    unique_filename = f"{uuid.uuid4()}.{file_extension}"
-    file_path = upload_dir / unique_filename
-
-    try:
-        with file_path.open("wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-    except Exception:
+    if len(contents) > max_size:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Could not save uploaded file."
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File size too large. Maximum allowed size is 5MB."
         )
-    finally:
-        file.file.close()
+
+    unique_filename = process_and_save_image(contents, "uploads/covers", prefix="cover", is_avatar=False)
 
     cover_url = f"/uploads/covers/{unique_filename}"
     current_user.cover_url = cover_url

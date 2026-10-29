@@ -15,6 +15,7 @@ class GuestbookWebSocketClient {
   private listeners: Set<EventListener> = new Set();
   private pingInterval: number | null = null;
   private reconnectTimeout: number | null = null;
+  private reconnectAttempts = 0;
   private isConnected = false;
   public lastOnlineCount = 1;
   private clientId = 'cli_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
@@ -60,6 +61,7 @@ class GuestbookWebSocketClient {
 
       this.socket.onopen = () => {
         this.isConnected = true;
+        this.reconnectAttempts = 0;
         console.log('[WebSocket] Connected to Guestbook stream:', this.clientId);
         this.startHeartbeat();
       };
@@ -142,13 +144,16 @@ class GuestbookWebSocketClient {
 
   private scheduleReconnect() {
     if (this.reconnectTimeout !== null) return;
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 15000);
+    this.reconnectAttempts += 1;
     this.reconnectTimeout = window.setTimeout(() => {
       this.reconnectTimeout = null;
       this.connect();
-    }, 2000);
+    }, delay);
   }
 
   public disconnect() {
+    this.reconnectAttempts = 0;
     this.stopHeartbeat();
     if (this.reconnectTimeout !== null) {
       clearTimeout(this.reconnectTimeout);

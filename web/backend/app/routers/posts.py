@@ -4,7 +4,7 @@ import uuid
 from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import desc, func
 import bleach
 
@@ -16,6 +16,7 @@ from app.schemas import (
 )
 from app.security import get_current_user, get_optional_current_user
 from app.websocket_manager import manager
+from app.services.image_optimizer import process_and_save_image
 
 router = APIRouter(prefix="/posts", tags=["Social Posts"])
 
@@ -79,15 +80,19 @@ def serialize_post(post: Post, current_user_id: Optional[int] = None) -> dict:
 def get_feed(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
+    cursor_id: Optional[int] = Query(None, description="Cursor for pagination: fetch posts with id < cursor_id"),
     user_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     query = db.query(Post).options(
         joinedload(Post.author),
-        joinedload(Post.reactions),
-        joinedload(Post.comments).joinedload(PostComment.author)
+        selectinload(Post.reactions),
+        selectinload(Post.comments).joinedload(PostComment.author)
     )
+
+    if cursor_id is not None:
+        query = query.filter(Post.id < cursor_id)
 
     if user_id:
         query = query.filter(Post.author_id == user_id)
@@ -101,7 +106,7 @@ def get_feed(
         else:
             query = query.filter(Post.privacy == "public")
 
-    posts = query.order_by(desc(Post.created_at)).offset(skip).limit(limit).all()
+    posts = query.order_by(desc(Post.id)).offset(skip).limit(limit).all()
     uid = current_user.id if current_user else None
     return [serialize_post(p, uid) for p in posts]
 
@@ -352,14 +357,5 @@ async def upload_post_media(
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="Kích thước ảnh vượt quá giới hạn 10MB.")
 
-    ext = os.path.splitext(file.filename or "")[1].lower()
-    if ext not in [".jpg", ".jpeg", ".png", ".gif", ".webp"]:
-        ext = ".jpg"
-
-    safe_filename = f"post_{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(UPLOAD_DIR, safe_filename)
-
-    with open(filepath, "wb") as f:
-        f.write(contents)
-
+    safe_filename = process_and_save_image(contents, UPLOAD_DIR, prefix="post", is_avatar=False)
     return {"url": f"/uploads/{safe_filename}"}

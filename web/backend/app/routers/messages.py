@@ -16,6 +16,7 @@ from app.schemas import (
 )
 from app.security import get_current_user
 from app.websocket_manager import manager
+from app.services.image_optimizer import process_and_save_image
 
 router = APIRouter(prefix="", tags=["Messenger"])
 
@@ -225,6 +226,7 @@ def get_conversation_messages(
     conversation_id: int,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
+    before_id: Optional[int] = Query(None, description="Cursor for historical message pagination"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -237,12 +239,21 @@ def get_conversation_messages(
     if not participant and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập cuộc trò chuyện này.")
 
-    messages = db.query(Message).options(
+    query = db.query(Message).options(
         joinedload(Message.sender),
         joinedload(Message.reactions).joinedload(MessageReaction.user)
     ).filter(
         Message.conversation_id == conversation_id
-    ).order_by(Message.created_at.asc()).offset(skip).limit(limit).all()
+    )
+
+    if before_id is not None:
+        query = query.filter(Message.id < before_id)
+        # Fetch the N messages immediately preceding before_id (descending), then reverse to maintain chronological order
+        messages = query.order_by(Message.id.desc()).offset(skip).limit(limit).all()
+        messages.reverse()
+    else:
+        # Normal conversation load: oldest to newest
+        messages = query.order_by(Message.created_at.asc()).offset(skip).limit(limit).all()
 
     # Update last_read_message_id
     if messages and participant:
@@ -435,13 +446,5 @@ async def upload_chat_media(
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="Kích thước tệp vượt quá 10MB.")
 
-    ext = os.path.splitext(file.filename or "")[1].lower()
-    if ext not in [".jpg", ".jpeg", ".png", ".gif", ".webp"]:
-        ext = ".jpg"
-
-    safe_name = f"chat_{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(UPLOAD_DIR, safe_name)
-    with open(filepath, "wb") as f:
-        f.write(contents)
-
+    safe_name = process_and_save_image(contents, UPLOAD_DIR, prefix="chat", is_avatar=False)
     return {"url": f"/uploads/{safe_name}"}

@@ -94,6 +94,8 @@ export const App: React.FC = () => {
   // Social feed state
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [isLoadingFeed, setIsLoadingFeed] = useState(false);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [friends, setFriends] = useState<UserProfile[]>([]);
 
   // Messenger Floating Chat Docks state
@@ -109,14 +111,36 @@ export const App: React.FC = () => {
   const loadFeed = useCallback(async () => {
     setIsLoadingFeed(true);
     try {
-      const data = await socialApi.fetchPosts(0, 30);
+      const data = await socialApi.fetchPosts(0, 15);
       setPosts(data);
+      setHasMorePosts(data.length >= 15);
     } catch (err) {
       console.error(err);
     } finally {
       setIsLoadingFeed(false);
     }
   }, []);
+
+  const loadMorePosts = useCallback(async () => {
+    if (isLoadingMore || !hasMorePosts || posts.length === 0) return;
+    setIsLoadingMore(true);
+    try {
+      const lastPostId = posts[posts.length - 1].id;
+      const olderPosts = await socialApi.fetchPosts(0, 15, undefined, lastPostId);
+      if (olderPosts.length < 15) {
+        setHasMorePosts(false);
+      }
+      setPosts((prev) => {
+        const existingIds = new Set(prev.map((p) => p.id));
+        const newUniquePosts = olderPosts.filter((p) => !existingIds.has(p.id));
+        return [...prev, ...newUniquePosts];
+      });
+    } catch (err) {
+      console.error('Failed to load more posts:', err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, hasMorePosts, posts]);
 
   const loadFriends = useCallback(async () => {
     if (!currentUser) return;
@@ -338,6 +362,24 @@ export const App: React.FC = () => {
                       onViewProfile={handleViewProfile}
                     />
                   ))
+                )}
+
+                {/* Infinite Scroll / Load More Trigger */}
+                {!isLoadingFeed && posts.length > 0 && hasMorePosts && (
+                  <div className="py-4 text-center">
+                    <button
+                      onClick={loadMorePosts}
+                      disabled={isLoadingMore}
+                      className="px-6 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium transition disabled:opacity-50"
+                    >
+                      {isLoadingMore ? 'Đang tải thêm bài viết...' : 'Tải thêm bài viết cũ hơn'}
+                    </button>
+                  </div>
+                )}
+                {!hasMorePosts && posts.length > 0 && (
+                  <div className="py-6 text-center text-xs text-slate-400">
+                    Bạn đã xem hết các bài viết mới nhất.
+                  </div>
                 )}
               </div>
             </main>

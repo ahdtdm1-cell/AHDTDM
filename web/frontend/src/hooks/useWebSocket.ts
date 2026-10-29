@@ -16,12 +16,35 @@ export function useWebSocket(handlers: WebSocketEventHandlers) {
   const [isConnected, setIsConnected] = useState(false);
   const [onlineUserIds, setOnlineUserIds] = useState<number[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectAttemptsRef = useRef<number>(0);
+  const reconnectTimeoutRef = useRef<number | null>(null);
+  const pingIntervalRef = useRef<number | null>(null);
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
+
+  const stopHeartbeat = useCallback(() => {
+    if (pingIntervalRef.current !== null) {
+      clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
+    }
+  }, []);
+
+  const startHeartbeat = useCallback(() => {
+    stopHeartbeat();
+    pingIntervalRef.current = window.setInterval(() => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'ping' }));
+      }
+    }, 15000); // Send heartbeat every 15s to keep connection alive
+  }, [stopHeartbeat]);
 
   const connect = useCallback(() => {
     const user = authService.getUser();
     if (!user) return;
+
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.CONNECTING || wsRef.current.readyState === WebSocket.OPEN)) {
+      return;
+    }
 
     // Build ws protocol and url
     let wsUrl: string;
@@ -42,12 +65,19 @@ export function useWebSocket(handlers: WebSocketEventHandlers) {
 
       ws.onopen = () => {
         setIsConnected(true);
+        reconnectAttemptsRef.current = 0; // Reset backoff on successful connect
+        startHeartbeat();
       };
 
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           const type = data.type;
+
+          if (type === 'pong') {
+            // Heartbeat ACK from server
+            return;
+          }
 
           if (type === 'connected') {
             if (Array.isArray(data.online_users)) {
@@ -84,9 +114,21 @@ export function useWebSocket(handlers: WebSocketEventHandlers) {
 
       ws.onclose = () => {
         setIsConnected(false);
-        // Attempt reconnect after 3 seconds if user still logged in
+        stopHeartbeat();
+
+        // Exponential backoff reconnect: 1s, 2s, 4s, 8s, up to 15s max
         if (authService.getUser()) {
-          setTimeout(connect, 3000);
+          const attempt = reconnectAttemptsRef.current;
+          const delay = Math.min(1000 * Math.pow(2, attempt), 15000);
+          reconnectAttemptsRef.current = attempt + 1;
+
+          if (reconnectTimeoutRef.current !== null) {
+            clearTimeout(reconnectTimeoutRef.current);
+          }
+          reconnectTimeoutRef.current = window.setTimeout(() => {
+            reconnectTimeoutRef.current = null;
+            connect();
+          }, delay);
         }
       };
 
@@ -96,16 +138,33 @@ export function useWebSocket(handlers: WebSocketEventHandlers) {
     } catch (e) {
       console.error('WebSocket connection error:', e);
     }
-  }, []);
+  }, [startHeartbeat, stopHeartbeat]);
 
   useEffect(() => {
     connect();
+
+    // Reconnect immediately if tab switches back to visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && authService.getUser()) {
+        if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+          reconnectAttemptsRef.current = 0;
+          connect();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      stopHeartbeat();
+      if (reconnectTimeoutRef.current !== null) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
       if (wsRef.current) {
         wsRef.current.close();
       }
     };
-  }, [connect]);
+  }, [connect, stopHeartbeat]);
 
   const sendEvent = useCallback((event: Record<string, any>) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
