@@ -203,7 +203,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
 
       <div className="max-w-4xl w-full mx-auto relative z-0">
         {/* Cover Photo Area with smooth aspect ratio and rounded corners */}
-        <div className="h-44 sm:h-60 md:h-72 w-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 sm:rounded-3xl shadow-lg relative group overflow-hidden border border-slate-200/60 dark:border-white/10 sm:mt-2">
+        <div className="h-44 sm:h-60 md:h-72 w-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 sm:rounded-3xl shadow-lg relative group border border-slate-200/60 dark:border-white/10 sm:mt-2">
           {profile.cover_url && (
             <img src={profile.cover_url} alt="Cover" className="w-full h-full object-cover" />
           )}

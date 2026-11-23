@@ -14,7 +14,9 @@ from app.models import User
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "fallback_dev_secret_key_ahdtdm_2026_super_secure_salt_replace_in_prod")
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+# Default 30-day session lifetime. Override with ACCESS_TOKEN_EXPIRE_MINUTES env var (in minutes).
+# Longer tokens increase revocation window if stolen; use shorter values for high-security deployments.
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "43200"))
 
 # Secure cookie configuration
 SECURE_COOKIES = os.getenv("SECURE_COOKIES", "True").lower() in ("true", "1", "t")
