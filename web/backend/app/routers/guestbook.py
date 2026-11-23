@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status, WebSocket, WebSocketDisconnect
@@ -11,7 +12,7 @@ from app.models import GuestbookMessage, User
 from app.schemas import GuestbookCreate, GuestbookUpdate, GuestbookResponse
 from app.services.moderation import censor_profanity
 import bleach
-from app.services.cleanup import purge_expired_anonymous_messages
+from app.services.cleanup import purge_expired_anonymous_messages, ANONYMOUS_RETENTION_DAYS
 from app.security import get_optional_current_user, get_current_admin
 from app.rate_limit import rate_limiter
 
@@ -164,8 +165,8 @@ async def create_guestbook_message(
         expires_at = None  # Logged in users: permanent retention in DB!
     else:
         user_id = None
-        # Anonymous users: set 30-day expiration date!
-        expires_at = datetime.utcnow() + timedelta(days=30)
+        # Anonymous users: set configurable expiration date!
+        expires_at = datetime.utcnow() + timedelta(days=ANONYMOUS_RETENTION_DAYS)
 
     msg = GuestbookMessage(
         author_name=author_name,
@@ -296,11 +297,13 @@ def purge_expired_messages_endpoint(
     current_admin: User = Depends(get_current_admin)
 ):
     """
-    Admin-only endpoint to manually trigger 30-day cleanup of anonymous messages.
+    Admin-only endpoint to manually trigger cleanup of anonymous messages.
+    Uses configurable retention period (default 30 days via ANONYMOUS_RETENTION_DAYS env).
     """
-    deleted_count = purge_expired_anonymous_messages(db)
+    deleted_count = purge_expired_anonymous_messages(db, ANONYMOUS_RETENTION_DAYS)
     return {
         "success": True,
-        "message": f"Đã quét và dọn dẹp {deleted_count} tin nhắn vãng lai quá hạn 30 ngày.",
-        "purged_count": deleted_count
+        "message": f"Đã quét và dọn dẹp {deleted_count} tin nhắn vãng lai quá hạn {ANONYMOUS_RETENTION_DAYS} ngày.",
+        "purged_count": deleted_count,
+        "retention_days": ANONYMOUS_RETENTION_DAYS
     }

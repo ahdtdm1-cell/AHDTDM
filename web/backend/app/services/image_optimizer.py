@@ -54,6 +54,19 @@ def process_and_save_image(
 
         # If animated GIF, preserve format to keep animation but ensure dimension bounds
         if getattr(image, "is_animated", False) and image.format == "GIF":
+            # Re-verify the image after opening to prevent bypass
+            image = Image.open(io.BytesIO(file_bytes))
+            image.verify()
+            # Re-open after verify
+            image = Image.open(io.BytesIO(file_bytes))
+
+            # Check dimensions to prevent large GIFs
+            if image.width > MAX_IMAGE_WIDTH or image.height > MAX_IMAGE_HEIGHT:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Kích thước GIF quá lớn (tối đa {MAX_IMAGE_WIDTH}x{MAX_IMAGE_HEIGHT})."
+                )
+
             filename = f"{prefix}_{unique_id}.gif"
             filepath = os.path.join(dest_dir, filename)
             with open(filepath, "wb") as f:

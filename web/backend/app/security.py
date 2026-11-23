@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 import jwt
 import bcrypt
+import hashlib
 from fastapi import Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
@@ -15,6 +16,9 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY", "fallback_dev_secret_key_ahdtdm_2026_su
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
+# Secure cookie configuration
+SECURE_COOKIES = os.getenv("SECURE_COOKIES", "True").lower() in ("true", "1", "t")
+
 # Token Extraction Dependency (Supports both HttpOnly cookie and Bearer token)
 def get_token_from_cookie(request: Request) -> Optional[str]:
     token = request.cookies.get("access_token")
@@ -25,18 +29,23 @@ def get_token_from_cookie(request: Request) -> Optional[str]:
         return auth_header[7:].strip()
     return None
 
+def _prehash_password(password: str) -> bytes:
+    """Pre-hash password with SHA-256 to avoid bcrypt 72-byte truncation."""
+    return hashlib.sha256(password.encode("utf-8")).digest()
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
-        return bcrypt.checkpw(
-            plain_password.encode("utf-8")[:72],
-            hashed_password.encode("utf-8")
-        )
+        # Pre-hash the password to avoid 72-byte truncation
+        prehashed = _prehash_password(plain_password)
+        return bcrypt.checkpw(prehashed, hashed_password.encode("utf-8"))
     except Exception:
         return False
 
 def get_password_hash(password: str) -> str:
     salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(password.encode("utf-8")[:72], salt)
+    # Pre-hash the password to avoid 72-byte truncation
+    prehashed = _prehash_password(password)
+    hashed = bcrypt.hashpw(prehashed, salt)
     return hashed.decode("utf-8")
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -68,6 +77,12 @@ def get_optional_current_user(
         return None
     username: str = payload["sub"]
     user = db.query(User).filter(User.username == username).first()
+    if user is None:
+        return None
+    # Verify token version for revocation
+    token_version = payload.get("token_version", 0)
+    if user.token_version != token_version:
+        return None
     return user
 
 def get_current_user(

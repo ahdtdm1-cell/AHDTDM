@@ -13,7 +13,8 @@ from app.security import (
     get_password_hash,
     verify_password,
     create_access_token,
-    get_current_user
+    get_current_user,
+    SECURE_COOKIES
 )
 from app.rate_limit import auth_rate_limiter
 from app.captcha import verify_captcha
@@ -102,6 +103,15 @@ def authenticate_user(db: Session, username: str, password: str) -> User:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+def _create_token_with_version(user: User) -> str:
+    """Create access token including user's token_version for revocation."""
+    return create_access_token(data={
+        "sub": user.username,
+        "role": user.role,
+        "user_id": user.id,
+        "token_version": user.token_version
+    })
+
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def register_user(encrypted_payload: EncryptedPayload, response: Response, db: Session = Depends(get_db), _: None = Depends(auth_rate_limiter)):
     decrypted_data = decrypt_payload(encrypted_payload.encrypted_key, encrypted_payload.payload)
@@ -112,10 +122,10 @@ def register_user(encrypted_payload: EncryptedPayload, response: Response, db: S
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=extract_validation_error(e)
         )
-    
+
     if payload.captcha_token or payload.captcha_answer:
         verify_captcha(payload.captcha_token, payload.captcha_answer)
-    
+
     # Check if username already exists
     existing_user = db.query(User).filter(User.username == payload.username).first()
     if existing_user:
@@ -123,7 +133,7 @@ def register_user(encrypted_payload: EncryptedPayload, response: Response, db: S
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Tên đăng nhập này đã tồn tại. Vui lòng chọn tên khác."
         )
-    
+
     # Public registration ALWAYS creates standard 'user' accounts.
     # Admin accounts are seeded during system setup or created via DB management.
     role = "user"
@@ -134,7 +144,7 @@ def register_user(encrypted_payload: EncryptedPayload, response: Response, db: S
         hashed_password=hashed_pw,
         role=role
     )
-    
+
     try:
         db.add(new_user)
         db.commit()
@@ -143,11 +153,11 @@ def register_user(encrypted_payload: EncryptedPayload, response: Response, db: S
         db.rollback()
         logger.error(f"Error during registration: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi hệ thống khi đăng ký.")
-    
+
     logger.info(f"Audit: New user registered '{new_user.username}'")
 
-    token = create_access_token(data={"sub": new_user.username, "role": new_user.role, "user_id": new_user.id})
-    response.set_cookie(key="access_token", value=token, httponly=True, secure=True, samesite="strict")
+    token = _create_token_with_version(new_user)
+    response.set_cookie(key="access_token", value=token, httponly=True, secure=SECURE_COOKIES, samesite="strict")
     user_resp = UserResponse.model_validate(new_user)
     return AuthResponse(user=user_resp)
 
@@ -161,31 +171,35 @@ def login_user(encrypted_payload: EncryptedPayload, response: Response, db: Sess
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=extract_validation_error(e)
         )
-    
+
     if payload.captcha_token or payload.captcha_answer:
         verify_captcha(payload.captcha_token, payload.captcha_answer)
-    
+
     user = authenticate_user(db, payload.username, payload.password)
-    
+
     logger.info(f"Audit: Successful login for user '{user.username}'")
-    token = create_access_token(data={"sub": user.username, "role": user.role, "user_id": user.id})
-    response.set_cookie(key="access_token", value=token, httponly=True, secure=True, samesite="strict")
+    token = _create_token_with_version(user)
+    response.set_cookie(key="access_token", value=token, httponly=True, secure=SECURE_COOKIES, samesite="strict")
     user_resp = UserResponse.model_validate(user)
     return AuthResponse(user=user_resp)
 
 @router.post("/token", response_model=AuthResponse)
 def login_for_access_token(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db), _: None = Depends(auth_rate_limiter)):
     user = authenticate_user(db, form_data.username, form_data.password)
-    
+
     logger.info(f"Audit: Successful token issuance for user '{user.username}'")
-    token = create_access_token(data={"sub": user.username, "role": user.role, "user_id": user.id})
-    response.set_cookie(key="access_token", value=token, httponly=True, secure=True, samesite="strict")
+    token = _create_token_with_version(user)
+    response.set_cookie(key="access_token", value=token, httponly=True, secure=SECURE_COOKIES, samesite="strict")
     user_resp = UserResponse.model_validate(user)
     return AuthResponse(user=user_resp)
 
 @router.post("/logout")
-def logout_user(response: Response):
-    response.delete_cookie("access_token")
+def logout_user(response: Response, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # Increment token_version to invalidate all existing tokens
+    current_user.token_version += 1
+    db.commit()
+
+    response.delete_cookie("access_token", secure=SECURE_COOKIES, samesite="strict")
     return {"message": "Đăng xuất thành công"}
 
 @router.get("/me", response_model=UserResponse)

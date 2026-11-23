@@ -10,7 +10,7 @@ class User(Base):
     username = Column(String(50), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(20), default="user", nullable=False)  # "admin" or "user"
-    
+
     # Profile fields
     avatar_url = Column(String(255), nullable=True)
     cover_url = Column(String(255), nullable=True)
@@ -20,7 +20,7 @@ class User(Base):
     location = Column(String(100), nullable=True)
     is_online = Column(Boolean, default=False)
     last_seen = Column(DateTime, default=datetime.utcnow)
-    
+
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -28,9 +28,14 @@ class User(Base):
     failed_login_attempts = Column(Integer, default=0, nullable=False)
     locked_until = Column(DateTime, nullable=True)
 
+    # Token version for JWT revocation (increment on logout/password change)
+    token_version = Column(Integer, default=0, nullable=False)
+
     def __init__(self, **kwargs):
         if "failed_login_attempts" not in kwargs:
             kwargs["failed_login_attempts"] = 0
+        if "token_version" not in kwargs:
+            kwargs["token_version"] = 0
         super().__init__(**kwargs)
 
     # Relationships

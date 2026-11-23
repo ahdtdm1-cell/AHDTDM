@@ -227,7 +227,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
                 <img
                   src={profile.avatar_url}
                   alt={`${displayName}'s avatar`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain bg-slate-200 dark:bg-slate-700"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}

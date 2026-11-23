@@ -2,6 +2,7 @@ from typing import Dict, Set, List, Optional, Any
 from fastapi import WebSocket
 import json
 import logging
+import asyncio
 
 logger = logging.getLogger("websocket_manager")
 
@@ -43,21 +44,34 @@ class ConnectionManager:
                 self.disconnect(user_id, ws)
 
     async def broadcast_to_users(self, user_ids: List[int], message: dict):
-        for uid in user_ids:
-            await self.send_personal_message(uid, message)
+        """Fan-out to multiple users concurrently using asyncio.gather."""
+        if not user_ids:
+            return
+        await asyncio.gather(*[
+            self.send_personal_message(uid, message) for uid in user_ids
+        ], return_exceptions=True)
 
     async def broadcast_all(self, message: dict):
-        for uid in list(self.active_connections.keys()):
-            await self.send_personal_message(uid, message)
+        """Fan-out to all connected users concurrently using asyncio.gather."""
+        user_ids = list(self.active_connections.keys())
+        if not user_ids:
+            return
+        await asyncio.gather(*[
+            self.send_personal_message(uid, message) for uid in user_ids
+        ], return_exceptions=True)
 
     async def broadcast_presence(self, user_id: int, is_online: bool, exclude_user_id: Optional[int] = None):
-        for uid in list(self.active_connections.keys()):
-            if exclude_user_id is not None and uid == exclude_user_id:
-                continue
-            await self.send_personal_message(uid, {
-                "type": "presence_update",
-                "user_id": user_id,
-                "is_online": is_online
-            })
+        """Fan-out presence updates concurrently using asyncio.gather."""
+        user_ids = [uid for uid in self.active_connections.keys() if uid != exclude_user_id]
+        if not user_ids:
+            return
+        presence_msg = {
+            "type": "presence_update",
+            "user_id": user_id,
+            "is_online": is_online
+        }
+        await asyncio.gather(*[
+            self.send_personal_message(uid, presence_msg) for uid in user_ids
+        ], return_exceptions=True)
 
 manager = ConnectionManager()
