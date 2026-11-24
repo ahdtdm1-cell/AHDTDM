@@ -1,7 +1,7 @@
 import {
   SocialPost, PostComment, ReactionType,
   Friendship, Conversation, ChatMessage,
-  NotificationItem, UserProfile
+  NotificationItem, UserProfile, ReelResponse, ReelComment
 } from '../types/social';
 
 const API_BASE = '/api';
@@ -294,6 +294,90 @@ export const socialApi = {
   async searchUsers(q: string): Promise<UserProfile[]> {
     if (!q || q.trim().length === 0) return [];
     const res = await fetch(`${API_BASE}/users?search=${encodeURIComponent(q)}`, { credentials: 'include' });
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  // --- Reels ---
+  async fetchReels(skip = 0, limit = 20, cursorId?: number): Promise<ReelResponse[]> {
+    const url = new URL(`${window.location.origin}${API_BASE}/reels`);
+    url.searchParams.set('skip', String(skip));
+    url.searchParams.set('limit', String(limit));
+    if (cursorId) url.searchParams.set('cursor_id', String(cursorId));
+    const res = await fetch(url.toString(), { credentials: 'include' });
+    if (!res.ok) throw new Error('Không thể tải reel.');
+    return res.json();
+  },
+
+  async fetchReel(reelId: number): Promise<ReelResponse | null> {
+    const res = await fetch(`${API_BASE}/reels/${reelId}`, { credentials: 'include' });
+    if (!res.ok) return null;
+    return res.json();
+  },
+
+  async createReel(content: string, file: File, privacy = 'public'): Promise<ReelResponse> {
+    const formData = new FormData();
+    formData.append('content', content);
+    formData.append('privacy', privacy);
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE}/reels`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Không thể tạo reel.');
+    }
+    return res.json();
+  },
+
+  async deleteReel(reelId: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/reels/${reelId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Không thể xóa reel.');
+    }
+  },
+
+  async reactToReel(reelId: number, reactionType: ReactionType): Promise<{ reel_id: number; likes_count: number; user_reaction: ReactionType | null }> {
+    const res = await fetch(`${API_BASE}/reels/${reelId}/react`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ reaction_type: reactionType })
+    });
+    if (!res.ok) throw new Error('Không thể bày tỏ cảm xúc.');
+    return res.json();
+  },
+
+  async addReelComment(reelId: number, content: string, parentId?: number): Promise<ReelComment> {
+    const res = await fetch(`${API_BASE}/reels/${reelId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ content, parent_id: parentId })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Không thể gửi bình luận.');
+    }
+    return res.json();
+  },
+
+  async deleteReelComment(commentId: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/reels/comments/${commentId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (!res.ok) throw new Error('Không thể xóa bình luận.');
+  },
+
+  async fetchReelComments(reelId: number): Promise<ReelComment[]> {
+    const res = await fetch(`${API_BASE}/reels/${reelId}/comments`, { credentials: 'include' });
     if (!res.ok) return [];
     return res.json();
   }

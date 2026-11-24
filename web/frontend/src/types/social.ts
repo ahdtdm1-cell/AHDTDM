@@ -124,3 +124,29 @@ export interface ActiveChatWindow {
   recipientId?: number;
   recipientName?: string;
 }
+
+export interface ReelComment {
+  id: number;
+  reel_id: number;
+  author_id: number;
+  author?: UserProfile;
+  parent_id?: number | null;
+  content: string;
+  created_at: string;
+}
+
+export interface ReelResponse {
+  id: number;
+  author_id: number;
+  author?: UserProfile;
+  content: string;
+  thumbnail_url?: string | null;
+  privacy: 'public' | 'friends' | 'private';
+  likes_count: number;
+  comments_count: number;
+  views_count: number;
+  expires_at: string;
+  created_at: string;
+  user_reaction?: ReactionType | null;
+  reactions_breakdown?: Record<string, number>;
+}

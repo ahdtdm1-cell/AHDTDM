@@ -5,6 +5,8 @@ import { RightSidebar } from './components/RightSidebar';
 import { StoriesBar } from './components/StoriesBar';
 import { CreatePostBox } from './components/CreatePostBox';
 import { PostCard } from './components/PostCard';
+import { ReelCard } from './components/ReelCard';
+import { ReelCreator } from './components/ReelCreator';
 import { FloatingChatDock } from './components/FloatingChatDock';
 import { MessengerPage } from './components/MessengerPage';
 import { FriendsTab } from './components/FriendsTab';
@@ -22,7 +24,7 @@ import { User } from './types/auth';
 import { authService } from './services/authService';
 import {
   SocialPost, UserProfile, ActiveChatWindow,
-  ChatMessage, NotificationItem
+  ChatMessage, NotificationItem, ReelResponse
 } from './types/social';
 import { socialApi } from './services/socialApi';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -99,6 +101,11 @@ export const App: React.FC = () => {
   const [hasMorePosts, setHasMorePosts] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [friends, setFriends] = useState<UserProfile[]>([]);
+  const [reels, setReels] = useState<ReelResponse[]>([]);
+  const [isLoadingReels, setIsLoadingReels] = useState(false);
+  const [hasMoreReels, setHasMoreReels] = useState(true);
+  const [highlightReelId, setHighlightReelId] = useState<number | null>(null);
+  const [reelToDelete, setReelToDelete] = useState<number | null>(null);
 
   // Messenger Floating Chat Docks state
   const [activeChats, setActiveChats] = useState<ActiveChatWindow[]>([]);
@@ -169,16 +176,48 @@ export const App: React.FC = () => {
     }
   }, [currentUser]);
 
+  const loadReels = useCallback(async () => {
+    setIsLoadingReels(true);
+    try {
+      const data = await socialApi.fetchReels(0, 10);
+      setReels(data);
+      setHasMoreReels(data.length >= 10);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingReels(false);
+    }
+  }, []);
+
+  const loadMoreReels = useCallback(async () => {
+    if (isLoadingReels || !hasMoreReels || reels.length === 0) return;
+    try {
+      const lastReelId = reels[reels.length - 1].id;
+      const olderReels = await socialApi.fetchReels(0, 10, lastReelId);
+      if (olderReels.length < 10) {
+        setHasMoreReels(false);
+      }
+      setReels((prev) => {
+        const existingIds = new Set(prev.map((r) => r.id));
+        const newUniqueReels = olderReels.filter((r) => !existingIds.has(r.id));
+        return [...prev, ...newUniqueReels];
+      });
+    } catch (err) {
+      console.error('Failed to load more reels:', err);
+    }
+  }, [isLoadingReels, hasMoreReels, reels]);
+
   useEffect(() => {
     loadFeed();
     loadFriends();
+    loadReels();
     if (currentUser) {
       socialApi.fetchConversations().then((convs) => {
         const unreadTotal = convs.reduce((acc, c) => acc + (c.unread_count || 0), 0);
         setUnreadMessagesCount(unreadTotal);
       }).catch(() => {});
     }
-  }, [loadFeed, loadFriends, currentUser]);
+  }, [loadFeed, loadFriends, loadReels, currentUser]);
 
   const openPostFromNotification = useCallback(async (postId: number) => {
     setActiveTab('feed');
@@ -314,6 +353,15 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleNewReel = (newReel: ReelResponse) => {
+    setReels((prev) => [newReel, ...prev]);
+  };
+
+  const handleReelDeleted = (reelId: number) => {
+    setReels((prev) => prev.filter((r) => r.id !== reelId));
+    if (highlightReelId === reelId) setHighlightReelId(null);
+  };
+
   // --- Legacy Guestbook Tab State ---
   const [legacyTopics, setLegacyTopics] = useState<ChatTopic[]>([]);
   const [activeTopicId, setActiveTopicId] = useState<string>('guestbook');
@@ -409,9 +457,16 @@ export const App: React.FC = () => {
               onOpenAuth={handleOpenAuth}
             />
 
-            {/* Center Column: Stories, Create Post, Social Feed */}
+            {/* Center Column: Stories, Reels, Create Post, Social Feed */}
             <main className="flex-1 max-w-2xl px-4 py-4 flex flex-col gap-4">
               <StoriesBar currentUser={currentUser} friends={friends} />
+
+              {/* Reel Creator */}
+              <ReelCreator
+                currentUser={currentUser}
+                onReelCreated={handleNewReel}
+                onOpenAuth={handleOpenAuth}
+              />
 
               <CreatePostBox
                 currentUser={currentUser}
@@ -443,6 +498,57 @@ export const App: React.FC = () => {
                       onViewProfile={handleViewProfile}
                     />
                   ))
+                )}
+
+                {/* Reels Section */}
+                {reels.length > 0 && (
+                  <div className="mt-6">
+                    <div className="flex items-center justify-between mb-3 px-1">
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white">Reels của bạn</h3>
+                      <span className="text-xs text-slate-400">{reels.length} video</span>
+                    </div>
+                    <div className="flex flex-col gap-4">
+                      {isLoadingReels ? (
+                        <div className="p-8 text-center text-sm text-slate-400">
+                          Đang tải reels...
+                        </div>
+                      ) : reels.length === 0 ? (
+                        <div className="p-8 text-center text-sm text-slate-400">
+                          Chưa có reel nào. Hãy tạo reel đầu tiên!
+                        </div>
+                      ) : (
+                        reels.map((reel) => (
+                          <ReelCard
+                            key={reel.id}
+                            reel={reel}
+                            currentUser={currentUser}
+                            highlighted={highlightReelId === reel.id}
+                            onReelDeleted={handleReelDeleted}
+                            onOpenAuth={handleOpenAuth}
+                            onViewProfile={handleViewProfile}
+                          />
+                        ))
+                      )}
+
+                      {/* Load More Reels */}
+                      {!isLoadingReels && reels.length > 0 && hasMoreReels && (
+                        <div className="py-3 text-center">
+                          <button
+                            onClick={loadMoreReels}
+                            disabled={isLoadingReels}
+                            className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium transition disabled:opacity-50"
+                          >
+                            Tải thêm reels
+                          </button>
+                        </div>
+                      )}
+                      {!hasMoreReels && reels.length > 0 && (
+                        <div className="py-3 text-center text-xs text-slate-400">
+                          Đã xem hết các reels.
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
 
                 {/* Infinite Scroll / Load More Trigger */}
