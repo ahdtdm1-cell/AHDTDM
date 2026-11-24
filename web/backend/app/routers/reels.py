@@ -35,7 +35,7 @@ ALLOWED_VIDEO_MIME_TYPES = [
     "video/ogg",
     "video/3gpp",
 ]
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB for reels
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB for reels
 
 
 def serialize_reel(reel: Reel, current_user_id: Optional[int] = None) -> dict:
