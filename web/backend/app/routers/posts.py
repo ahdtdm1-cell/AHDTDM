@@ -213,6 +213,7 @@ async def react_to_post(
     ).first()
 
     user_reaction = None
+    notification = None
     if existing_reaction:
         if existing_reaction.reaction_type == payload.reaction_type:
             # Toggle off
@@ -236,29 +237,37 @@ async def react_to_post(
 
         # Create notification if reacting to another user's post
         if post.author_id != current_user.id:
-            notif = Notification(
+            notification = Notification(
                 recipient_id=post.author_id,
                 actor_id=current_user.id,
                 type="post_reaction",
                 reference_id=post.id,
                 content=f"{current_user.display_name or current_user.username} đã bày tỏ cảm xúc về bài viết của bạn."
             )
-            db.add(notif)
-            try:
-                await manager.send_personal_message(post.author_id, {
-                    "type": "notification",
-                    "notification": {
-                        "type": "post_reaction",
-                        "actor_name": current_user.display_name or current_user.username,
-                        "content": notif.content,
-                        "reference_id": post.id
-                    }
-                })
-            except Exception:
-                pass
+            db.add(notification)
 
     db.commit()
     db.refresh(post)
+
+    # Broadcast only after the notification row is safely committed.
+    if notification is not None:
+        try:
+            await manager.send_personal_message(notification.recipient_id, {
+                "type": "notification",
+                "notification": {
+                    "id": notification.id,
+                    "type": "post_reaction",
+                    "actor_id": current_user.id,
+                    "actor_name": current_user.display_name or current_user.username,
+                    "avatar_url": current_user.avatar_url,
+                    "content": notification.content,
+                    "reference_id": post.id,
+                    "is_read": False,
+                    "created_at": notification.created_at.isoformat() if notification.created_at else None,
+                }
+            })
+        except Exception:
+            pass
 
     return {
         "post_id": post.id,
@@ -293,30 +302,40 @@ async def add_comment(
     post.comments_count += 1
 
     # Create notification if commenting on another user's post
+    notification = None
     if post.author_id != current_user.id:
-        notif = Notification(
+        preview = clean_content[:30] if clean_content else "[Hình ảnh]"
+        notification = Notification(
             recipient_id=post.author_id,
             actor_id=current_user.id,
             type="post_comment",
             reference_id=post.id,
-            content=f"{current_user.display_name or current_user.username} đã bình luận bài viết của bạn: \"{clean_content[:30]}...\""
+            content=f"{current_user.display_name or current_user.username} đã bình luận bài viết của bạn: \"{preview}\""
         )
-        db.add(notif)
+        db.add(notification)
+
+    db.commit()
+    db.refresh(comment)
+
+    # Broadcast only after the notification row is safely committed.
+    if notification is not None:
         try:
-            await manager.send_personal_message(post.author_id, {
+            await manager.send_personal_message(notification.recipient_id, {
                 "type": "notification",
                 "notification": {
+                    "id": notification.id,
                     "type": "post_comment",
+                    "actor_id": current_user.id,
                     "actor_name": current_user.display_name or current_user.username,
-                    "content": notif.content,
-                    "reference_id": post.id
+                    "avatar_url": current_user.avatar_url,
+                    "content": notification.content,
+                    "reference_id": post.id,
+                    "is_read": False,
+                    "created_at": notification.created_at.isoformat() if notification.created_at else None,
                 }
             })
         except Exception:
             pass
-
-    db.commit()
-    db.refresh(comment)
 
     return comment
 

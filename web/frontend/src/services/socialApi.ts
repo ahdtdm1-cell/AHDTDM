@@ -21,6 +21,12 @@ export const socialApi = {
     return res.json();
   },
 
+  async fetchPost(postId: number): Promise<SocialPost | null> {
+    const res = await fetch(`${API_BASE}/posts/${postId}`, { credentials: 'include' });
+    if (!res.ok) return null;
+    return res.json();
+  },
+
   async createPost(content: string, mediaUrls: string[] = [], privacy = 'public'): Promise<SocialPost> {
     const res = await fetch(`${API_BASE}/posts`, {
       method: 'POST',
@@ -232,10 +238,11 @@ export const socialApi = {
   },
 
   // --- Notifications ---
-  async fetchNotifications(skip = 0, limit = 20): Promise<NotificationItem[]> {
-    const res = await fetch(`${API_BASE}/notifications?skip=${skip}&limit=${limit}`, {
-      credentials: 'include'
-    });
+  async fetchNotifications(skip = 0, limit = 20, unreadOnly = false): Promise<NotificationItem[]> {
+    const res = await fetch(
+      `${API_BASE}/notifications?skip=${skip}&limit=${limit}${unreadOnly ? '&unread_only=true' : ''}`,
+      { credentials: 'include' }
+    );
     if (!res.ok) return [];
     return res.json();
   },
@@ -252,6 +259,24 @@ export const socialApi = {
       method: 'PUT',
       credentials: 'include'
     });
+  },
+
+  async deleteNotification(notifId: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/notifications/${notifId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (!res.ok) throw new Error('Không thể xóa thông báo.');
+  },
+
+  async clearReadNotifications(): Promise<number> {
+    const res = await fetch(`${API_BASE}/notifications?read_only=true`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (!res.ok) return 0;
+    const data = await res.json().catch(() => ({}));
+    return data.deleted || 0;
   },
 
   async fetchUnreadNotifCount(): Promise<number> {

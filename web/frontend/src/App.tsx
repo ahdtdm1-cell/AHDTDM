@@ -11,6 +11,7 @@ import { FriendsTab } from './components/FriendsTab';
 import ProfilePage from './components/ProfilePage';
 import { AuthModal } from './components/AuthModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { NotificationToast } from './components/NotificationToast';
 
 // Keep legacy portfolio guestbook components for the "Lưu bút" tab
 import { Sidebar } from './components/Sidebar';
@@ -25,6 +26,7 @@ import {
 } from './types/social';
 import { socialApi } from './services/socialApi';
 import { useWebSocket } from './hooks/useWebSocket';
+import { useNotifications } from './hooks/useNotifications';
 
 // Legacy services for guestbook tab
 import { ChatTopic, ChatMessage as LegacyChatMessage } from './types/chat';
@@ -104,8 +106,23 @@ export const App: React.FC = () => {
   const [typingMap, setTypingMap] = useState<Record<number, boolean>>({});
 
   // Notifications & Unread badge
-  const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
+  const {
+    notifications,
+    unreadCount: unreadNotifsCount,
+    isLoading: notificationsLoading,
+    hasMore: hasMoreNotifications,
+    unreadOnly: notificationsUnreadOnly,
+    loadNotifications,
+    loadMore: loadMoreNotifications,
+    markRead: markNotificationRead,
+    markAllRead: markAllNotificationsRead,
+    remove: deleteNotification,
+    clearRead: clearReadNotifications,
+    handleIncoming: handleIncomingNotification
+  } = useNotifications(currentUser);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [highlightPostId, setHighlightPostId] = useState<number | null>(null);
+  const [toastNotification, setToastNotification] = useState<NotificationItem | null>(null);
 
   // Load feed posts and friends
   const loadFeed = useCallback(async () => {
@@ -156,7 +173,6 @@ export const App: React.FC = () => {
     loadFeed();
     loadFriends();
     if (currentUser) {
-      socialApi.fetchUnreadNotifCount().then(setUnreadNotifsCount).catch(() => {});
       socialApi.fetchConversations().then((convs) => {
         const unreadTotal = convs.reduce((acc, c) => acc + (c.unread_count || 0), 0);
         setUnreadMessagesCount(unreadTotal);
@@ -164,17 +180,70 @@ export const App: React.FC = () => {
     }
   }, [loadFeed, loadFriends, currentUser]);
 
+  const openPostFromNotification = useCallback(async (postId: number) => {
+    setActiveTab('feed');
+    setHighlightPostId(postId);
+
+    if (!posts.some((p) => p.id === postId)) {
+      const post = await socialApi.fetchPost(postId).catch(() => null);
+      if (post) {
+        setPosts((prev) => (prev.some((p) => p.id === post.id) ? prev : [post, ...prev]));
+      }
+    }
+
+    window.setTimeout(() => {
+      document.getElementById(`post-${postId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+    window.setTimeout(() => {
+      setHighlightPostId((current) => (current === postId ? null : current));
+    }, 4000);
+  }, [posts]);
+
+  const handleNotificationNavigate = useCallback((notif: NotificationItem) => {
+    switch (notif.type) {
+      case 'friend_request':
+      case 'friend_accept':
+        setActiveTab('friends');
+        break;
+      case 'message':
+        if (notif.reference_id) {
+          setMessengerConvId(notif.reference_id);
+          setActiveTab('messenger');
+        }
+        break;
+      case 'post_reaction':
+      case 'post_comment':
+        if (notif.reference_id) {
+          void openPostFromNotification(notif.reference_id);
+        }
+        break;
+      default:
+        break;
+    }
+  }, [openPostFromNotification]);
+
+  useEffect(() => {
+    if (!toastNotification) return;
+    const timer = window.setTimeout(() => setToastNotification(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [toastNotification]);
+
   // Realtime WebSocket Handlers
   const { isConnected, onlineUserIds, sendEvent, sendTyping } = useWebSocket({
     onChatMessage: (msg) => {
       setIncomingWsMessage(msg);
-      setUnreadMessagesCount((prev) => prev + 1);
+      const isOwnMessage = msg.sender_id === currentUser?.id;
+      const isOpenConversation = activeTab === 'messenger' && messengerConvId === msg.conversation_id;
+      if (!isOwnMessage && !isOpenConversation) {
+        setUnreadMessagesCount((prev) => prev + 1);
+      }
     },
     onPresenceUpdate: () => {
       loadFriends();
     },
-    onNotification: () => {
-      setUnreadNotifsCount((prev) => prev + 1);
+    onNotification: (notif) => {
+      const item = handleIncomingNotification(notif);
+      if (item) setToastNotification(item);
     },
     onTypingIndicator: (data) => {
       setTypingMap((prev) => ({
@@ -309,6 +378,17 @@ export const App: React.FC = () => {
         onViewProfile={handleViewProfile}
         isDark={theme === 'dark'}
         onToggleTheme={handleToggleTheme}
+        notifications={notifications}
+        notificationsLoading={notificationsLoading}
+        hasMoreNotifications={hasMoreNotifications}
+        notificationsUnreadOnly={notificationsUnreadOnly}
+        onLoadNotifications={loadNotifications}
+        onLoadMoreNotifications={loadMoreNotifications}
+        onMarkNotificationRead={markNotificationRead}
+        onMarkAllNotificationsRead={markAllNotificationsRead}
+        onDeleteNotification={deleteNotification}
+        onClearReadNotifications={clearReadNotifications}
+        onNotificationNavigate={handleNotificationNavigate}
       />
 
       {/* 2. Main Page Content */}
@@ -355,6 +435,7 @@ export const App: React.FC = () => {
                       key={post.id}
                       post={post}
                       currentUser={currentUser}
+                      highlighted={highlightPostId === post.id}
                       onPostDeleted={(postId) =>
                         setPosts((prev) => prev.filter((p) => p.id !== postId))
                       }
@@ -498,6 +579,18 @@ export const App: React.FC = () => {
         incomingMessage={incomingWsMessage}
         typingMap={typingMap}
       />
+
+      {/* Realtime notification toast */}
+      {toastNotification && (
+        <NotificationToast
+          notification={toastNotification}
+          onClose={() => setToastNotification(null)}
+          onClick={(notif) => {
+            setToastNotification(null);
+            handleNotificationNavigate(notif);
+          }}
+        />
+      )}
 
       {/* 4. Auth Modal (Login / Register) */}
       <AuthModal

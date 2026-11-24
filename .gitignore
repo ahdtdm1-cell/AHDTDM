@@ -54,4 +54,7 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Runtime-generated secrets
+web/backend/keys/
+
 docs/

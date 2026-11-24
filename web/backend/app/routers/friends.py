@@ -71,11 +71,16 @@ async def send_friend_request(
         await manager.send_personal_message(friend_id, {
             "type": "notification",
             "notification": {
+                "id": notif.id,
+                "recipient_id": notif.recipient_id,
                 "type": "friend_request",
                 "actor_id": current_user.id,
                 "actor_name": current_user.display_name or current_user.username,
                 "avatar_url": current_user.avatar_url,
-                "content": notif.content
+                "content": notif.content,
+                "reference_id": friendship.id,
+                "is_read": False,
+                "created_at": notif.created_at.isoformat() if notif.created_at else None
             }
         })
     except Exception:
@@ -116,11 +121,16 @@ async def accept_friend_request(
         await manager.send_personal_message(friendship.user_id, {
             "type": "notification",
             "notification": {
+                "id": notif.id,
+                "recipient_id": notif.recipient_id,
                 "type": "friend_accept",
                 "actor_id": current_user.id,
                 "actor_name": current_user.display_name or current_user.username,
                 "avatar_url": current_user.avatar_url,
-                "content": notif.content
+                "content": notif.content,
+                "reference_id": friendship.id,
+                "is_read": False,
+                "created_at": notif.created_at.isoformat() if notif.created_at else None
             }
         })
     except Exception:

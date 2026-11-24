@@ -1,7 +1,7 @@
 import os
 import uuid
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc, and_, or_, func
@@ -51,6 +51,93 @@ def serialize_message(msg: Message) -> dict:
         "is_unsent": msg.is_unsent,
         "created_at": msg.created_at,
         "reactions": reactions_data
+    }
+
+
+MESSAGE_NOTIFICATION_DEDUPE_MINUTES = 5
+
+
+def create_offline_message_notifications(
+    db: Session,
+    conversation_id: int,
+    conversation: Optional[Conversation],
+    sender: User,
+    recipient_ids: List[int],
+) -> List[Notification]:
+    """Create (or refresh) a notification for recipients who are currently offline.
+
+    Notifications are de-duplicated per (sender, recipient, conversation) within a
+    short window so a burst of messages does not flood the notification list.
+    """
+    if not recipient_ids:
+        return []
+
+    cutoff = datetime.utcnow() - timedelta(minutes=MESSAGE_NOTIFICATION_DEDUPE_MINUTES)
+    sender_name = sender.display_name or sender.username
+    conversation_title = conversation.title if conversation and conversation.is_group else None
+    if conversation_title:
+        content = f"{sender_name} đã gửi tin nhắn mới trong nhóm \"{conversation_title}\"."
+    else:
+        content = f"{sender_name} đã gửi cho bạn tin nhắn mới."
+
+    touched: List[Notification] = []
+    for recipient_id in recipient_ids:
+        if manager.is_user_online(recipient_id):
+            continue
+
+        existing = db.query(Notification).filter(
+            Notification.recipient_id == recipient_id,
+            Notification.actor_id == sender.id,
+            Notification.type == "message",
+            Notification.reference_id == conversation_id,
+            Notification.created_at >= cutoff,
+        ).order_by(desc(Notification.created_at)).first()
+
+        if existing:
+            # Re-surface the notification if the recipient already read the previous one.
+            if existing.is_read:
+                existing.is_read = False
+                existing.content = content
+                existing.created_at = datetime.utcnow()
+                touched.append(existing)
+            continue
+
+        notif = Notification(
+            recipient_id=recipient_id,
+            actor_id=sender.id,
+            type="message",
+            reference_id=conversation_id,
+            content=content,
+        )
+        db.add(notif)
+        touched.append(notif)
+
+    if touched:
+        db.commit()
+        for notif in touched:
+            db.refresh(notif)
+
+    return touched
+
+
+def serialize_notification(notif: Notification, actor: User) -> dict:
+    return {
+        "id": notif.id,
+        "recipient_id": notif.recipient_id,
+        "actor_id": notif.actor_id,
+        "actor": {
+            "id": actor.id,
+            "username": actor.username,
+            "display_name": actor.display_name,
+            "avatar_url": actor.avatar_url,
+            "role": actor.role,
+            "created_at": actor.created_at.isoformat() if actor.created_at else None,
+        },
+        "type": notif.type,
+        "reference_id": notif.reference_id,
+        "content": notif.content,
+        "is_read": notif.is_read,
+        "created_at": notif.created_at.isoformat() if notif.created_at else None,
     }
 
 
@@ -301,6 +388,13 @@ def get_conversation_messages(
     if messages and participant:
         max_id = max(m.id for m in messages)
         participant.last_read_message_id = max_id
+        # Reading the conversation also clears its "new message" notifications.
+        db.query(Notification).filter(
+            Notification.recipient_id == current_user.id,
+            Notification.type == "message",
+            Notification.reference_id == conversation_id,
+            Notification.is_read == False,
+        ).update({"is_read": True}, synchronize_session=False)
         db.commit()
 
     return [serialize_message(m) for m in messages]
@@ -358,6 +452,15 @@ async def send_message(
         ).all()
         participant_ids = [p.user_id for p in participants]
 
+        # Notify participants who are offline (online users already receive chat_message).
+        offline_notifications = create_offline_message_notifications(
+            db,
+            conversation_id=conversation_id,
+            conversation=conv,
+            sender=current_user,
+            recipient_ids=[uid for uid in participant_ids if uid != current_user.id],
+        )
+
         await manager.broadcast_to_users(participant_ids, {
             "type": "chat_message",
             "message": {
@@ -372,6 +475,12 @@ async def send_message(
                 "created_at": msg.created_at.isoformat()
             }
         })
+
+        for notif in offline_notifications:
+            await manager.send_personal_message(notif.recipient_id, {
+                "type": "notification",
+                "notification": serialize_notification(notif, current_user)
+            })
     except Exception:
         pass
 

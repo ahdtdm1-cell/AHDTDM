@@ -16,6 +16,7 @@ interface PostCardProps {
   onPostDeleted: (postId: number) => void;
   onOpenAuth: (mode: 'login') => void;
   onViewProfile?: (userId: number) => void;
+  highlighted?: boolean;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
@@ -23,7 +24,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   currentUser,
   onPostDeleted,
   onOpenAuth,
-  onViewProfile
+  onViewProfile,
+  highlighted = false
 }) => {
   const [likesCount, setLikesCount] = useState(post.likes_count);
   const [userReaction, setUserReaction] = useState<ReactionType | null>(post.user_reaction || null);
@@ -95,7 +97,14 @@ export const PostCard: React.FC<PostCardProps> = ({
   const isAuthor = currentUser && (currentUser.id === post.author_id || currentUser.role === 'admin');
 
   return (
-    <article className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xs border border-slate-200/80 dark:border-white/10 p-3.5 sm:p-4 flex flex-col gap-3 transition-colors">
+    <article
+      id={`post-${post.id}`}
+      className={`bg-white dark:bg-slate-900 rounded-2xl shadow-2xs border p-3.5 sm:p-4 flex flex-col gap-3 transition-all duration-300 ${
+        highlighted
+          ? 'border-blue-500 ring-2 ring-blue-500/40'
+          : 'border-slate-200/80 dark:border-white/10'
+      }`}
+    >
       {/* Post Header */}
       <div className="flex items-center justify-between">
         <div

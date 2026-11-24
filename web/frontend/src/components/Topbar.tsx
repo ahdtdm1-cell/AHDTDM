@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   MessageCircle, Bell, Search, Home, Users, BookOpen,
-  LogOut, User as UserIcon, Moon, Sun, Check, MessageSquare
+  LogOut, User as UserIcon, Moon, Sun, Check, MessageSquare,
+  UserPlus, UserCheck, Heart, Trash2, Loader2, ChevronDown
 } from 'lucide-react';
 import { User } from '../types/auth';
 import { NotificationItem, Conversation, UserProfile } from '../types/social';
 import { socialApi } from '../services/socialApi';
+import { formatRelativeTime } from '../utils/time';
 
 interface TopbarProps {
   currentUser: User | null;
@@ -19,7 +21,27 @@ interface TopbarProps {
   onViewProfile?: (userId: number) => void;
   isDark: boolean;
   onToggleTheme: () => void;
+  // Notification state (owned by useNotifications so badge and list stay in sync)
+  notifications?: NotificationItem[];
+  notificationsLoading?: boolean;
+  hasMoreNotifications?: boolean;
+  notificationsUnreadOnly?: boolean;
+  onLoadNotifications?: (force?: boolean, unreadOnly?: boolean) => void | Promise<void>;
+  onLoadMoreNotifications?: () => void | Promise<void>;
+  onMarkNotificationRead?: (notifId: number) => void | Promise<void>;
+  onMarkAllNotificationsRead?: () => void | Promise<void>;
+  onDeleteNotification?: (notifId: number) => void | Promise<void>;
+  onClearReadNotifications?: () => void | Promise<number>;
+  onNotificationNavigate?: (notif: NotificationItem) => void;
 }
+
+const NOTIFICATION_ICONS: Record<string, React.ReactNode> = {
+  friend_request: <UserPlus className="w-3.5 h-3.5" />,
+  friend_accept: <UserCheck className="w-3.5 h-3.5" />,
+  post_reaction: <Heart className="w-3.5 h-3.5" />,
+  post_comment: <MessageSquare className="w-3.5 h-3.5" />,
+  message: <MessageCircle className="w-3.5 h-3.5" />,
+};
 
 export const Topbar: React.FC<TopbarProps> = ({
   currentUser,
@@ -32,12 +54,22 @@ export const Topbar: React.FC<TopbarProps> = ({
   onOpenDirectChat,
   onViewProfile,
   isDark,
-  onToggleTheme
+  onToggleTheme,
+  notifications = [],
+  notificationsLoading = false,
+  hasMoreNotifications = false,
+  notificationsUnreadOnly = false,
+  onLoadNotifications,
+  onLoadMoreNotifications,
+  onMarkNotificationRead,
+  onMarkAllNotificationsRead,
+  onDeleteNotification,
+  onClearReadNotifications,
+  onNotificationNavigate
 }) => {
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const [showMessengerDropdown, setShowMessengerDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
@@ -70,13 +102,21 @@ export const Topbar: React.FC<TopbarProps> = ({
 
   // Fetch notifications when opened
   const handleToggleNotifs = async () => {
-    setShowNotifDropdown((prev) => !prev);
+    const willOpen = !showNotifDropdown;
+    setShowNotifDropdown(willOpen);
     setShowMessengerDropdown(false);
     setShowUserDropdown(false);
-    if (!showNotifDropdown) {
-      const data = await socialApi.fetchNotifications(0, 15);
-      setNotifications(data);
+    if (willOpen) {
+      await onLoadNotifications?.(true);
     }
+  };
+
+  const handleNotificationClick = async (notif: NotificationItem) => {
+    if (!notif.is_read) {
+      await onMarkNotificationRead?.(notif.id);
+    }
+    setShowNotifDropdown(false);
+    onNotificationNavigate?.(notif);
   };
 
   // Fetch conversations when messenger popover opened
@@ -352,67 +392,123 @@ export const Topbar: React.FC<TopbarProps> = ({
               {/* Notifications Dropdown */}
               {showNotifDropdown && (
                 <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200/80 dark:border-white/10 py-3 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-4 pb-2 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
-                    <h3 className="font-bold text-base text-slate-800 dark:text-slate-100">Thông báo</h3>
-                    <button
-                      onClick={async () => {
-                        await socialApi.markAllNotificationsRead();
-                        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-                      }}
-                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium flex items-center gap-1"
-                    >
-                      <Check className="w-3.5 h-3.5" /> Đánh dấu đã đọc tất cả
-                    </button>
+                  <div className="px-4 pb-2 border-b border-slate-100 dark:border-white/10 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <h3 className="font-bold text-base text-slate-800 dark:text-slate-100">Thông báo</h3>
+                      {unreadNotifsCount > 0 && (
+                        <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.5 rounded-full">
+                          {unreadNotifsCount} mới
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <button
+                        onClick={() => onLoadNotifications?.(true, !notificationsUnreadOnly)}
+                        className={`text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors ${
+                          notificationsUnreadOnly
+                            ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40'
+                            : 'border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                        }`}
+                        title={notificationsUnreadOnly ? 'Hiện tất cả thông báo' : 'Chỉ hiện thông báo chưa đọc'}
+                      >
+                        Chưa đọc
+                      </button>
+                      {onClearReadNotifications && notifications.some((n) => n.is_read) && (
+                        <button
+                          onClick={() => onClearReadNotifications()}
+                          className="text-[11px] text-slate-400 hover:text-rose-500 transition-colors"
+                          title="Xóa các thông báo đã đọc"
+                        >
+                          Xóa đã đọc
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onMarkAllNotificationsRead?.()}
+                        disabled={unreadNotifsCount === 0}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium flex items-center gap-1 disabled:text-slate-400 disabled:no-underline disabled:cursor-not-allowed"
+                      >
+                        <Check className="w-3.5 h-3.5" /> Đã đọc tất cả
+                      </button>
+                    </div>
                   </div>
 
                   <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
-                    {notifications.length === 0 ? (
+                    {notificationsLoading && notifications.length === 0 ? (
+                      <div className="p-6 flex items-center justify-center gap-2 text-sm text-slate-400">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Đang tải thông báo...
+                      </div>
+                    ) : notifications.length === 0 ? (
                       <div className="p-6 text-center text-sm text-slate-400">
-                        Bạn không có thông báo mới nào.
+                        {notificationsUnreadOnly
+                          ? 'Bạn đã đọc hết thông báo rồi.'
+                          : 'Bạn không có thông báo mới nào.'}
                       </div>
                     ) : (
                       notifications.map((notif) => (
                         <div
                           key={notif.id}
-                          onClick={async () => {
-                            if (!notif.is_read) {
-                              await socialApi.markNotificationRead(notif.id);
-                              setNotifications((prev) =>
-                                prev.map((n) => (n.id === notif.id ? { ...n, is_read: true } : n))
-                              );
-                            }
-                            if (notif.type === 'friend_request') {
-                              onSelectTab('friends');
-                              setShowNotifDropdown(false);
-                            }
-                          }}
-                          className={`px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer flex items-center gap-3 transition-colors press-tactile ${
+                          onClick={() => handleNotificationClick(notif)}
+                          className={`group px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer flex items-center gap-3 transition-colors press-tactile ${
                             !notif.is_read ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
                           }`}
                         >
-                          <img
-                            src={
-                              notif.actor?.avatar_url ||
-                              `https://api.dicebear.com/7.x/initials/svg?seed=${notif.actor_id}`
-                            }
-                            alt="Actor"
-                            className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
-                          />
+                          <div className="relative shrink-0">
+                            <img
+                              src={
+                                notif.actor?.avatar_url ||
+                                `https://api.dicebear.com/7.x/initials/svg?seed=${notif.actor_id}`
+                              }
+                              alt="Actor"
+                              className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                            />
+                            <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-slate-200 dark:border-slate-700">
+                              {NOTIFICATION_ICONS[notif.type] ?? <Bell className="w-3.5 h-3.5" />}
+                            </span>
+                          </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-slate-800 dark:text-slate-200 line-clamp-2">
                               {notif.content}
                             </p>
                             <span className="text-[10px] text-slate-400 mt-1 block">
-                              {new Date(notif.created_at).toLocaleDateString()}
+                              {formatRelativeTime(notif.created_at)}
                             </span>
                           </div>
                           {!notif.is_read && (
                             <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
                           )}
+                          {onDeleteNotification && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteNotification(notif.id);
+                              }}
+                              title="Xóa thông báo"
+                              className="p-1.5 rounded-full text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all shrink-0"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       ))
                     )}
                   </div>
+
+                  {hasMoreNotifications && (
+                    <div className="px-3 pt-2 mt-1 border-t border-slate-100 dark:border-white/10">
+                      <button
+                        onClick={() => onLoadMoreNotifications?.()}
+                        disabled={notificationsLoading}
+                        className="w-full py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                      >
+                        {notificationsLoading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        )}
+                        Xem thông báo cũ hơn
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
