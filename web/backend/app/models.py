@@ -1,5 +1,5 @@
-from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, UniqueConstraint
+from datetime import datetime, timezone
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, UniqueConstraint, func
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -43,6 +43,7 @@ class User(Base):
     posts = relationship("Post", back_populates="author", cascade="all, delete-orphan")
     post_reactions = relationship("PostReaction", back_populates="user", cascade="all, delete-orphan")
     post_comments = relationship("PostComment", back_populates="author", cascade="all, delete-orphan")
+    reels = relationship("Reel", back_populates="author", cascade="all, delete-orphan")
     notifications_received = relationship("Notification", foreign_keys="[Notification.recipient_id]", back_populates="recipient", cascade="all, delete-orphan")
     notifications_sent = relationship("Notification", foreign_keys="[Notification.actor_id]", back_populates="actor", cascade="all, delete-orphan")
 
@@ -213,7 +214,7 @@ class GuestbookMessage(Base):
     likes_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     user_token = Column(String(64), nullable=True, index=True)
-    
+
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     is_edited = Column(Boolean, default=False)
     edited_at = Column(DateTime, nullable=True)
@@ -221,3 +222,54 @@ class GuestbookMessage(Base):
     image = Column(String, nullable=True)
 
     user = relationship("User", back_populates="messages")
+
+
+class Reel(Base):
+    __tablename__ = "reels"
+
+    id = Column(Integer, primary_key=True, index=True)
+    author_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    content = Column(Text, nullable=False)  # video URL or path
+    thumbnail_url = Column(String(255), nullable=True)  # preview image
+    privacy = Column(String(20), default="public", nullable=False)  # "public", "friends", "private"
+    likes_count = Column(Integer, default=0)
+    comments_count = Column(Integer, default=0)
+    views_count = Column(Integer, default=0)
+    expires_at = Column(DateTime, nullable=False, index=True)  # Auto-expire timestamp
+    created_at = Column(DateTime, default=func.now(), index=True)  # Use func.now() for DB-generated timestamp
+    updated_at = Column(DateTime, nullable=True)
+
+    author = relationship("User", back_populates="reels")
+    reactions = relationship("Reaction", back_populates="reel", cascade="all, delete-orphan")
+    comments = relationship("ReelComment", back_populates="reel", cascade="all, delete-orphan")
+
+
+class Reaction(Base):
+    __tablename__ = "reel_reactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    reel_id = Column(Integer, ForeignKey("reels.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    reaction_type = Column(String(20), default="like", nullable=False)  # like, love, care, haha, wow, sad, angry
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("reel_id", "user_id", name="uq_reel_reaction_user"),
+    )
+
+    reel = relationship("Reel", back_populates="reactions")
+    user = relationship("User")
+
+
+class ReelComment(Base):
+    __tablename__ = "reel_comments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    reel_id = Column(Integer, ForeignKey("reels.id", ondelete="CASCADE"), nullable=False, index=True)
+    author_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    parent_id = Column(Integer, ForeignKey("reel_comments.id", ondelete="CASCADE"), nullable=True)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    reel = relationship("Reel", back_populates="comments")
+    author = relationship("User")

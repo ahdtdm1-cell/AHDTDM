@@ -125,6 +125,49 @@ class PostCreate(BaseModel):
     media_urls: Optional[List[str]] = Field(default_factory=list)
     privacy: str = Field("public", max_length=20)
 
+
+# --- Reel Schemas ---
+class ReelCreate(BaseModel):
+    content: str = Field(..., description="URL hoặc đường dẫn file video/reel")
+    privacy: str = Field("public", max_length=20, description="Công khai: ai cũng thấy, Bạn bè: chỉ bạn bè, Riêng tư: chỉ tác giả")
+    thumbnail_url: Optional[str] = Field(None, description="URL thumbnail preview (tự động sinh từ video)")
+
+
+class ReelResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    author_id: int
+    author: Optional[UserResponse] = None
+    content: str
+    thumbnail_url: Optional[str] = None
+    privacy: str
+    likes_count: int
+    comments_count: int
+    views_count: int
+    expires_at: datetime
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    user_reaction: Optional[str] = None
+    reactions_breakdown: Optional[dict] = None
+
+
+class ReelCommentCreate(BaseModel):
+    content: str = Field(..., min_length=1, max_length=2000)
+    parent_id: Optional[int] = None
+
+
+class ReelCommentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    reel_id: int
+    author_id: int
+    author: Optional[UserResponse] = None
+    parent_id: Optional[int] = None
+    content: str
+    created_at: datetime
+
 class PostCommentCreate(BaseModel):
     content: str = Field(..., min_length=1, max_length=2000)
     parent_id: Optional[int] = None

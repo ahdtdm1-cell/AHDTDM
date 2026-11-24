@@ -58,3 +58,6 @@ Thumbs.db
 web/backend/keys/
 
 docs/
+*.mp4
+/web/backend/tests/__pycache__
+*.pyc
