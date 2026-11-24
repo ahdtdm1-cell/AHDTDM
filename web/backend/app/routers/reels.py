@@ -161,7 +161,7 @@ async def create_reel(
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=400,
-            detail=f"Kích thước video vượt quá giới hạn 50MB."
+            detail=f"Kích thước video vượt quá giới hạn 100MB."
         )
 
     # Generate unique ID and thumbnail
