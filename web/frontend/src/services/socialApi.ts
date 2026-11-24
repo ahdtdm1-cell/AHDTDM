@@ -300,7 +300,8 @@ export const socialApi = {
 
   // --- Reels ---
   async fetchReels(skip = 0, limit = 20, cursorId?: number): Promise<ReelResponse[]> {
-    const url = new URL(`${window.location.origin}${API_BASE}/reels`);
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+    const url = new URL(`${origin}${API_BASE}/reels`);
     url.searchParams.set('skip', String(skip));
     url.searchParams.set('limit', String(limit));
     if (cursorId) url.searchParams.set('cursor_id', String(cursorId));
