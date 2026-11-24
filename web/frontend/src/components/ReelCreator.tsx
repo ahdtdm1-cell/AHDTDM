@@ -12,6 +12,8 @@ interface ReelCreatorProps {
   currentUser: User | null;
   onReelCreated?: (reel: any) => void;
   onOpenAuth: (mode: 'login') => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 const PRIVACY_OPTIONS = [
@@ -24,6 +26,8 @@ export const ReelCreator: React.FC<ReelCreatorProps> = ({
   currentUser,
   onReelCreated,
   onOpenAuth,
+  isOpen = true,
+  onClose,
 }) => {
   const [content, setContent] = useState('');
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -158,6 +162,10 @@ export const ReelCreator: React.FC<ReelCreatorProps> = ({
     setShowPrivacyMenu(false);
   };
 
+  if (!isOpen) {
+    return null;
+  }
+
   if (!currentUser) {
     return (
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xs border border-slate-200/80 dark:border-white/10 p-6 text-center">
@@ -174,7 +182,14 @@ export const ReelCreator: React.FC<ReelCreatorProps> = ({
   }
 
   return (
-    <section className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xs border border-slate-200/80 dark:border-white/10 p-4 sm:p-5 mb-4">
+    <section className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xs border border-slate-200/80 dark:border-white/10 p-4 sm:p-5 mb-4 relative">
+      <button
+        onClick={onClose}
+        className="absolute top-2 right-2 w-7 h-7 bg-white/90 dark:bg-slate-800/90 rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 transition-colors press-tactile cursor-pointer z-10"
+        title="Đóng"
+      >
+        <X className="w-4 h-4 text-slate-600" />
+      </button>
       <h2 className="font-bold text-lg text-slate-900 dark:text-white mb-4 flex items-center gap-2">
         <Video className="w-5 h-5 text-pink-500" />
         Tạo Reel mới

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { PlayCircle } from 'lucide-react';
 import { Topbar } from './components/Topbar';
 import { LeftSidebar } from './components/LeftSidebar';
 import { RightSidebar } from './components/RightSidebar';
@@ -106,6 +107,7 @@ export const App: React.FC = () => {
   const [hasMoreReels, setHasMoreReels] = useState(true);
   const [highlightReelId, setHighlightReelId] = useState<number | null>(null);
   const [reelToDelete, setReelToDelete] = useState<number | null>(null);
+  const [showReelCreator, setShowReelCreator] = useState(false);
 
   // Messenger Floating Chat Docks state
   const [activeChats, setActiveChats] = useState<ActiveChatWindow[]>([]);
@@ -461,11 +463,24 @@ export const App: React.FC = () => {
             <main className="flex-1 max-w-2xl px-4 py-4 flex flex-col gap-4">
               <StoriesBar currentUser={currentUser} friends={friends} />
 
-              {/* Reel Creator */}
+              {/* Reel Create Button */}
+              {currentUser && (
+                <button
+                  onClick={() => setShowReelCreator(true)}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-pink-50 dark:bg-pink-900/30 border-2 border-dashed border-pink-200 dark:border-pink-700 rounded-xl hover:bg-pink-100 dark:hover:bg-pink-900/50 transition-all press-tactile cursor-pointer"
+                >
+                  <PlayCircle className="w-6 h-6 text-pink-600" />
+                  <span className="font-medium text-pink-700 dark:text-pink-300">Tạo Reel mới</span>
+                </button>
+              )}
+
+              {/* Reel Creator (only shown when open) */}
               <ReelCreator
                 currentUser={currentUser}
                 onReelCreated={handleNewReel}
                 onOpenAuth={handleOpenAuth}
+                isOpen={showReelCreator}
+                onClose={() => setShowReelCreator(false)}
               />
 
               <CreatePostBox
