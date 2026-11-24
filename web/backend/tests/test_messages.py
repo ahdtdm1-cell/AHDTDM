@@ -94,3 +94,48 @@ def test_direct_messaging_flow(test_db):
     )
     assert react_res.status_code == 200
     assert react_res.json()["emoji"] == "❤️"
+
+
+def test_conversation_list_reports_unread_counts(test_db):
+    db, u1, u2, u3 = test_db
+    client = TestClient(app)
+    alice = {"Authorization": f"Bearer {create_access_token(data={'sub': u1.username, 'user_id': u1.id})}"}
+    bob = {"Authorization": f"Bearer {create_access_token(data={'sub': u2.username, 'user_id': u2.id})}"}
+
+    conv_id = client.post(f"/api/conversations/direct/{u2.id}", headers=alice).json()["id"]
+
+    for text in ("Tin nhắn một", "Tin nhắn hai"):
+        send_res = client.post(
+            f"/api/conversations/{conv_id}/messages",
+            json={"content": text, "message_type": "text"},
+            headers=alice
+        )
+        assert send_res.status_code == 201
+
+    # Bob has 2 unread messages; Alice never counts her own messages as unread.
+    bob_convs = client.get("/api/conversations", headers=bob)
+    assert bob_convs.status_code == 200
+    bob_by_id = {conv["id"]: conv for conv in bob_convs.json()}
+    assert bob_by_id[conv_id]["unread_count"] == 2
+
+    alice_convs = client.get("/api/conversations", headers=alice)
+    assert alice_convs.status_code == 200
+    alice_by_id = {conv["id"]: conv for conv in alice_convs.json()}
+    assert alice_by_id[conv_id]["unread_count"] == 0
+
+    # Opening the conversation moves the read marker, clearing the unread count.
+    assert client.get(f"/api/conversations/{conv_id}/messages", headers=bob).status_code == 200
+    bob_after = {conv["id"]: conv for conv in client.get("/api/conversations", headers=bob).json()}
+    assert bob_after[conv_id]["unread_count"] == 0
+
+    # A recalled message must not count as unread.
+    third = client.post(
+        f"/api/conversations/{conv_id}/messages",
+        json={"content": "Tin nhắn ba", "message_type": "text"},
+        headers=alice
+    )
+    assert third.status_code == 201
+    assert client.put(f"/api/messages/{third.json()['id']}/unsend", headers=alice).status_code == 200
+
+    bob_after_unsend = {conv["id"]: conv for conv in client.get("/api/conversations", headers=bob).json()}
+    assert bob_after_unsend[conv_id]["unread_count"] == 0

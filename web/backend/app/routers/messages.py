@@ -155,55 +155,24 @@ def get_user_conversations(
     if not conv_ids:
         return []
 
-    # Build a map of conversation_id -> last_read_message_id for current user
-    last_read_map = {p.conversation_id: (p.last_read_message_id or 0) for p in participant_records}
-
-    # Single subquery to compute unread counts for all conversations at once
-    unread_subq = db.query(
-        Message.conversation_id,
-        func.count(Message.id).label("unread_count")
-    ).filter(
-        Message.conversation_id.in_(conv_ids),
-        Message.id > func.coalesce(
-            func.nullif(
-                func.case(
-                    {cid: last_read_map[cid] for cid in conv_ids},
-                    value=Message.conversation_id
-                ),
-                0
-            ),
-            0
-        ),
-        Message.sender_id != current_user.id
-    ).group_by(Message.conversation_id).subquery()
-
-    # Alternative: simpler approach using a correlated subquery per conversation
-    # Since the case expression is complex, use a simpler approach:
-    # Build unread count map with a single query
-    unread_counts = db.query(
+    # Unread counts in one query: messages newer than the participant's read marker.
+    unread_rows = db.query(
         Message.conversation_id,
         func.count(Message.id)
+    ).join(
+        ConversationParticipant,
+        and_(
+            ConversationParticipant.conversation_id == Message.conversation_id,
+            ConversationParticipant.user_id == current_user.id
+        )
     ).filter(
         Message.conversation_id.in_(conv_ids),
-        Message.sender_id != current_user.id
+        Message.sender_id != current_user.id,
+        Message.is_unsent == False,
+        Message.id > func.coalesce(ConversationParticipant.last_read_message_id, 0)
     ).group_by(Message.conversation_id).all()
 
-    # Filter by last_read_id in Python (since it's per-conversation)
-    # Actually, better: do the filtering in the DB using a join
-    # Let's use a simpler but still single-query approach
-    unread_map = {}
-    if conv_ids:
-        # Get all messages for these conversations where sender != current_user
-        # Then filter by last_read_id per conversation
-        # This is still N+1 in worst case but with single query
-        msgs = db.query(Message.conversation_id, Message.id).filter(
-            Message.conversation_id.in_(conv_ids),
-            Message.sender_id != current_user.id
-        ).all()
-        for conv_id, msg_id in msgs:
-            last_read = last_read_map.get(conv_id, 0)
-            if msg_id > last_read:
-                unread_map[conv_id] = unread_map.get(conv_id, 0) + 1
+    unread_map = {conversation_id: count for conversation_id, count in unread_rows}
 
     conversations = db.query(Conversation).options(
         joinedload(Conversation.participants).joinedload(ConversationParticipant.user)
@@ -258,7 +227,7 @@ def get_or_create_direct_conversation(
     p1_convs = db.query(ConversationParticipant.conversation_id).join(Conversation).filter(
         Conversation.is_group == False,
         ConversationParticipant.user_id == current_user.id
-    ).subquery()
+    ).scalar_subquery()
 
     shared_conv = db.query(Conversation).options(
         joinedload(Conversation.participants).joinedload(ConversationParticipant.user)
