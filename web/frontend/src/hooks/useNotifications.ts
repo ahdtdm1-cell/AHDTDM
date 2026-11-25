@@ -52,6 +52,7 @@ export function useNotifications(currentUser: User | null) {
   const [unreadOnly, setUnreadOnly] = useState(false);
 
   const notificationsRef = useRef<NotificationItem[]>([]);
+  const unreadCountRef = useRef(0);
   const hasLoadedRef = useRef(false);
   const isLoadingRef = useRef(false);
   const unreadOnlyRef = useRef(false);
@@ -61,25 +62,20 @@ export function useNotifications(currentUser: User | null) {
   }, [notifications]);
 
   useEffect(() => {
+    unreadCountRef.current = unreadCount;
+  }, [unreadCount]);
+
+  useEffect(() => {
     unreadOnlyRef.current = unreadOnly;
   }, [unreadOnly]);
 
-  const refreshUnreadCount = useCallback(async () => {
-    if (!currentUser) {
-      setUnreadCount(0);
-      return;
-    }
-    const count = await socialApi.fetchUnreadNotifCount();
-    setUnreadCount(count);
-  }, [currentUser]);
-
-  const loadNotifications = useCallback(async (force = false, onlyUnread?: boolean) => {
+  const loadNotifications = useCallback(async (force = false, onlyUnread?: boolean, silent = false) => {
     if (!currentUser || isLoadingRef.current) return;
     const nextUnreadOnly = onlyUnread ?? unreadOnlyRef.current;
     if (hasLoadedRef.current && !force && nextUnreadOnly === unreadOnlyRef.current) return;
 
     isLoadingRef.current = true;
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
     try {
       const data = await socialApi.fetchNotifications(0, PAGE_SIZE, nextUnreadOnly);
       unreadOnlyRef.current = nextUnreadOnly;
@@ -89,9 +85,22 @@ export function useNotifications(currentUser: User | null) {
       hasLoadedRef.current = true;
     } finally {
       isLoadingRef.current = false;
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, [currentUser]);
+
+  const refreshUnreadCount = useCallback(async () => {
+    if (!currentUser) {
+      setUnreadCount(0);
+      return;
+    }
+    const count = await socialApi.fetchUnreadNotifCount();
+    const prevCount = unreadCountRef.current;
+    setUnreadCount(count);
+    if (hasLoadedRef.current && count > prevCount) {
+      void loadNotifications(true, unreadOnlyRef.current, true);
+    }
+  }, [currentUser, loadNotifications]);
 
   const loadMore = useCallback(async () => {
     if (!currentUser || isLoadingRef.current || !hasMore) return;
@@ -221,7 +230,7 @@ export function useNotifications(currentUser: User | null) {
   useEffect(() => {
     if (!currentUser) return;
 
-    const interval = window.setInterval(refreshUnreadCount, 60_000);
+    const interval = window.setInterval(refreshUnreadCount, 20_000);
     const onVisible = () => {
       if (document.visibilityState === 'visible') refreshUnreadCount();
     };

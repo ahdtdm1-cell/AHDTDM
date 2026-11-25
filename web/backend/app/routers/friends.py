@@ -43,7 +43,39 @@ async def send_friend_request(
                 # Target user had already sent a request to current_user -> auto accept!
                 existing.status = "accepted"
                 existing.updated_at = datetime.utcnow()
+                notif = Notification(
+                    recipient_id=friend_id,
+                    actor_id=current_user.id,
+                    type="friend_accept",
+                    reference_id=existing.id,
+                    content=f"{current_user.display_name or current_user.username} đã chấp nhận lời mời kết bạn của bạn."
+                )
+                db.add(notif)
                 db.commit()
+                db.refresh(notif)
+                try:
+                    await manager.send_personal_message(friend_id, {
+                        "type": "notification",
+                        "notification": {
+                            "id": notif.id,
+                            "recipient_id": notif.recipient_id,
+                            "type": "friend_accept",
+                            "actor_id": current_user.id,
+                            "actor_name": current_user.display_name or current_user.username,
+                            "avatar_url": current_user.avatar_url,
+                            "content": notif.content,
+                            "reference_id": existing.id,
+                            "is_read": False,
+                            "created_at": notif.created_at.isoformat() if notif.created_at else None
+                        }
+                    })
+                    await manager.broadcast_to_users([current_user.id, friend_id], {
+                        "type": "friends_updated",
+                        "user_id": current_user.id,
+                        "friend_id": friend_id
+                    })
+                except Exception:
+                    pass
                 return {"id": existing.id, "status": "accepted", "message": "Đã chấp nhận lời mời kết bạn."}
 
     # Create new pending friendship
@@ -133,6 +165,11 @@ async def accept_friend_request(
                 "created_at": notif.created_at.isoformat() if notif.created_at else None
             }
         })
+        await manager.broadcast_to_users([friendship.user_id, current_user.id], {
+            "type": "friends_updated",
+            "user_id": current_user.id,
+            "friend_id": friendship.user_id
+        })
     except Exception:
         pass
 
@@ -140,7 +177,7 @@ async def accept_friend_request(
 
 
 @router.post("/decline/{request_id}", status_code=status.HTTP_200_OK)
-def decline_friend_request(
+async def decline_friend_request(
     request_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -152,8 +189,17 @@ def decline_friend_request(
     if friendship.friend_id != current_user.id and friendship.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Bạn không có quyền hủy lời mời này.")
 
+    uid_a, uid_b = friendship.user_id, friendship.friend_id
     db.delete(friendship)
     db.commit()
+    try:
+        await manager.broadcast_to_users([uid_a, uid_b], {
+            "type": "friends_updated",
+            "user_id": uid_a,
+            "friend_id": uid_b
+        })
+    except Exception:
+        pass
     return {"message": "Đã từ chối hoặc hủy lời mời kết bạn."}
 
 
@@ -201,11 +247,15 @@ def get_incoming_requests(
     output = []
     for r in requests:
         sender = db.query(User).filter(User.id == r.user_id).first()
+        sender_resp = None
+        if sender:
+            sender_resp = UserResponse.model_validate(sender)
+            sender_resp.is_online = manager.is_user_online(sender.id)
         output.append({
             "id": r.id,
             "user_id": r.user_id,
             "friend_id": r.friend_id,
             "created_at": r.created_at,
-            "sender": UserResponse.model_validate(sender) if sender else None
+            "sender": sender_resp
         })
     return output

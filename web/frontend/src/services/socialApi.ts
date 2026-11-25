@@ -293,7 +293,23 @@ export const socialApi = {
     }
   },
 
-  // --- Search Users ---
+  // --- Presence & Search Users ---
+  async sendHeartbeat(): Promise<number[]> {
+    const res = await fetch(`${API_BASE}/users/me/heartbeat`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => ({}));
+    return Array.isArray(data.online_user_ids) ? data.online_user_ids : [];
+  },
+
+  sendOfflineBeacon(): void {
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      navigator.sendBeacon(`${API_BASE}/users/me/offline`);
+    }
+  },
+
   async searchUsers(q: string): Promise<UserProfile[]> {
     if (!q || q.trim().length === 0) return [];
     const res = await fetch(`${API_BASE}/users?search=${encodeURIComponent(q)}`, { credentials: 'include' });

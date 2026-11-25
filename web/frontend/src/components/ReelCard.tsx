@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ThumbsUp, MessageSquare, Share2, MoreHorizontal,
   Globe, Users as UsersIcon, Lock, Trash2, Loader2, Send
@@ -36,6 +36,12 @@ export const ReelCard: React.FC<ReelCardProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [commentContent, setCommentContent] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  useEffect(() => {
+    setLikesCount(reel.likes_count);
+    setUserReaction(reel.user_reaction || null);
+    setCommentsCount(reel.comments_count);
+  }, [reel.likes_count, reel.user_reaction, reel.comments_count]);
 
   const handleSelectReaction = async (type: ReactionType) => {
     if (!currentUser) {

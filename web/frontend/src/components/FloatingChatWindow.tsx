@@ -6,6 +6,7 @@ import {
 import { ChatMessage, ActiveChatWindow } from '../types/social';
 import { User } from '../types/auth';
 import { socialApi } from '../services/socialApi';
+import { MessageSyncEvent } from './MessengerPage';
 
 interface FloatingChatWindowProps {
   chat: ActiveChatWindow;
@@ -15,6 +16,9 @@ interface FloatingChatWindowProps {
   onExpandToFullscreen: (convId: number) => void;
   onSendTyping: (convId: number, isTyping: boolean, participantIds: number[]) => void;
   incomingMessage?: ChatMessage | null;
+  messageEvent?: MessageSyncEvent | null;
+  isRecipientOnline?: boolean;
+  isWsConnected?: boolean;
   isRecipientTyping?: boolean;
 }
 
@@ -26,6 +30,9 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
   onExpandToFullscreen,
   onSendTyping,
   incomingMessage,
+  messageEvent,
+  isRecipientOnline = false,
+  isWsConnected = false,
   isRecipientTyping
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -67,6 +74,44 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
       });
     }
   }, [incomingMessage, chat.conversationId]);
+
+  // Handle unsend / reaction realtime updates
+  useEffect(() => {
+    if (!messageEvent || messageEvent.conversation_id !== chat.conversationId) return;
+    if (messageEvent.type === 'unsent') {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageEvent.message_id
+            ? { ...m, is_unsent: true, content: 'Tin nhắn đã bị thu hồi', media_url: null }
+            : m
+        )
+      );
+    } else if (messageEvent.type === 'reaction') {
+      socialApi.fetchMessages(chat.conversationId, 0, 40).then(setMessages).catch(() => {});
+    }
+  }, [messageEvent, chat.conversationId]);
+
+  // Silent background refresh when chat is open
+  useEffect(() => {
+    const syncMessages = async () => {
+      if (document.visibilityState === 'hidden' || chat.isMinimized) return;
+      try {
+        const data = await socialApi.fetchMessages(chat.conversationId, 0, 40);
+        setMessages(data);
+      } catch {
+        // ignore transient errors
+      }
+    };
+    const intervalMs = isWsConnected ? 25000 : 5000;
+    const timer = window.setInterval(syncMessages, intervalMs);
+    document.addEventListener('visibilitychange', syncMessages);
+    window.addEventListener('focus', syncMessages);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', syncMessages);
+      window.removeEventListener('focus', syncMessages);
+    };
+  }, [chat.conversationId, chat.isMinimized, isWsConnected]);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -160,7 +205,11 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
               alt={chat.title || chat.recipientName || 'Chat'}
               className="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-white/10"
             />
-            <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 rounded-full ring-1 ring-white dark:ring-slate-900" />
+            <span
+              className={`absolute bottom-0 right-0 w-2 h-2 rounded-full ring-1 ring-white dark:ring-slate-900 ${
+                isRecipientOnline ? 'bg-emerald-500' : 'bg-slate-400'
+              }`}
+            />
           </div>
           <span className="font-semibold text-xs text-slate-800 dark:text-slate-100 truncate tracking-tight">
             {chat.title || chat.recipientName || 'Trò chuyện'}

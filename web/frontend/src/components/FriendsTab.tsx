@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { UserCheck, UserPlus, MessageCircle, X, Check, Users } from 'lucide-react';
 import { UserProfile } from '../types/social';
 import { User } from '../types/auth';
@@ -6,6 +6,9 @@ import { socialApi } from '../services/socialApi';
 
 interface FriendsTabProps {
   currentUser: User | null;
+  friends?: UserProfile[];
+  onlineUserIds?: number[];
+  onFriendsChanged?: () => void | Promise<void>;
   onOpenDirectChat: (friendId: number, friendName: string, avatarUrl?: string) => void;
   onViewProfile?: (userId: number) => void;
   onOpenAuth: (mode: 'login') => void;
@@ -13,36 +16,64 @@ interface FriendsTabProps {
 
 export const FriendsTab: React.FC<FriendsTabProps> = ({
   currentUser,
+  friends: externalFriends,
+  onlineUserIds = [],
+  onFriendsChanged,
   onOpenDirectChat,
   onViewProfile,
   onOpenAuth
 }) => {
-  const [friends, setFriends] = useState<UserProfile[]>([]);
+  const [localFriends, setLocalFriends] = useState<UserProfile[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<'all' | 'requests'>('all');
 
-  useEffect(() => {
-    async function loadData() {
-      if (!currentUser) return;
-      try {
-        const [fList, reqList] = await Promise.all([
-          socialApi.fetchFriends(),
-          socialApi.fetchIncomingRequests()
-        ]);
-        setFriends(fList);
-        setIncomingRequests(reqList);
-      } catch (err) {
-        console.error(err);
+  const friends = externalFriends ?? localFriends;
+
+  const loadData = useCallback(async () => {
+    if (!currentUser) return;
+    try {
+      const [fList, reqList] = await Promise.all([
+        externalFriends ? Promise.resolve(externalFriends) : socialApi.fetchFriends(),
+        socialApi.fetchIncomingRequests()
+      ]);
+      if (!externalFriends) {
+        setLocalFriends(fList);
       }
+      setIncomingRequests(reqList);
+    } catch (err) {
+      console.error(err);
     }
+  }, [currentUser, externalFriends]);
+
+  useEffect(() => {
     loadData();
+  }, [loadData]);
+
+  // Periodically refresh incoming requests in the background while tab is visible
+  useEffect(() => {
+    if (!currentUser) return;
+    const refreshRequests = () => {
+      if (document.visibilityState === 'hidden') return;
+      socialApi.fetchIncomingRequests().then(setIncomingRequests).catch(() => {});
+    };
+    const timer = window.setInterval(refreshRequests, 10000);
+    document.addEventListener('visibilitychange', refreshRequests);
+    window.addEventListener('focus', refreshRequests);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refreshRequests);
+      window.removeEventListener('focus', refreshRequests);
+    };
   }, [currentUser]);
 
   const handleAccept = async (requestId: number, friend: UserProfile) => {
     try {
       await socialApi.acceptFriendRequest(requestId);
       setIncomingRequests((prev) => prev.filter((r) => r.id !== requestId));
-      setFriends((prev) => [...prev, friend]);
+      if (!externalFriends) {
+        setLocalFriends((prev) => (prev.some((f) => f.id === friend.id) ? prev : [...prev, friend]));
+      }
+      await onFriendsChanged?.();
     } catch (err) {
       console.error(err);
     }
@@ -52,6 +83,7 @@ export const FriendsTab: React.FC<FriendsTabProps> = ({
     try {
       await socialApi.declineFriendRequest(requestId);
       setIncomingRequests((prev) => prev.filter((r) => r.id !== requestId));
+      await onFriendsChanged?.();
     } catch (err) {
       console.error(err);
     }
@@ -197,7 +229,9 @@ export const FriendsTab: React.FC<FriendsTabProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-              {friends.map((f) => (
+              {friends.map((f) => {
+                const isOnline = onlineUserIds.includes(f.id) || Boolean(f.is_online);
+                return (
                 <div
                   key={f.id}
                   className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/70 dark:border-white/10 p-4 flex flex-col gap-3.5 shadow-xs hover:shadow-md transition-shadow duration-150"
@@ -215,17 +249,24 @@ export const FriendsTab: React.FC<FriendsTabProps> = ({
                         alt={f.username}
                         className="w-12 h-12 rounded-2xl object-cover border border-slate-200/80 dark:border-white/10"
                       />
-                      {f.is_online && (
-                        <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 shadow-xs animate-pulse" />
-                      )}
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 shadow-xs ${
+                          isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                        }`}
+                      />
                     </div>
                     <div className="min-w-0 flex-1">
                       <h4 className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
                         {f.display_name || f.username}
                       </h4>
-                      <span className="text-xs text-slate-400 block truncate">
-                        {f.bio || `@${f.username}`}
+                      <span className={`text-[11px] font-medium block ${isOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                        {isOnline ? 'Đang hoạt động' : 'Ngoại tuyến'}
                       </span>
+                      {f.bio && (
+                        <span className="text-xs text-slate-400 block truncate">
+                          {f.bio}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -250,7 +291,8 @@ export const FriendsTab: React.FC<FriendsTabProps> = ({
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

@@ -175,17 +175,28 @@ for prefix in [settings.API_PREFIX, f"{settings.API_PREFIX}/v1"]:
     app.include_router(reels.router, prefix=prefix)
 
 # Realtime WebSocket Gateway for Messenger & Notifications
+from datetime import datetime
 from fastapi import WebSocket, WebSocketDisconnect
 from typing import Optional
 from app.websocket_manager import manager
+from app.services.presence import update_user_presence, set_async_update_callback
+
+
+# Register the persistence callback for WebSocket events (callback-based to avoid race conditions)
+set_async_update_callback(update_user_presence)
+
 
 @app.websocket("/api/ws")
 @app.websocket("/ws")
 async def websocket_gateway(websocket: WebSocket, token: Optional[str] = None):
-    # Retrieve token from query or cookie
+    # Retrieve token from query, cookie, or Authorization header
     if not token:
         token = websocket.cookies.get("access_token")
-    
+    if not token:
+        auth_header = websocket.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+
     user_id = None
     username = None
     if token:
@@ -203,6 +214,7 @@ async def websocket_gateway(websocket: WebSocket, token: Optional[str] = None):
         return
 
     await manager.connect(user_id, websocket)
+    await update_user_presence(user_id, True)
 
     try:
         await websocket.send_json({
@@ -237,9 +249,11 @@ async def websocket_gateway(websocket: WebSocket, token: Optional[str] = None):
     except WebSocketDisconnect:
         manager.disconnect(user_id, websocket)
         if not manager.is_user_online(user_id):
+            await update_user_presence(user_id, False)
             await manager.broadcast_presence(user_id, False)
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
         manager.disconnect(user_id, websocket)
         if not manager.is_user_online(user_id):
+            await update_user_presence(user_id, False)
             await manager.broadcast_presence(user_id, False)

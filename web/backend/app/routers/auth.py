@@ -18,6 +18,8 @@ from app.security import (
 )
 from app.rate_limit import auth_rate_limiter
 from app.captcha import verify_captcha
+from app.websocket_manager import manager
+from app.services.presence import update_user_presence
 from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -142,7 +144,9 @@ def register_user(encrypted_payload: EncryptedPayload, response: Response, db: S
     new_user = User(
         username=payload.username,
         hashed_password=hashed_pw,
-        role=role
+        role=role,
+        is_online=True,
+        last_seen=datetime.utcnow()
     )
 
     try:
@@ -155,14 +159,16 @@ def register_user(encrypted_payload: EncryptedPayload, response: Response, db: S
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi hệ thống khi đăng ký.")
 
     logger.info(f"Audit: New user registered '{new_user.username}'")
+    manager.touch_heartbeat(new_user.id)
 
     token = _create_token_with_version(new_user)
     response.set_cookie(key="access_token", value=token, httponly=True, secure=SECURE_COOKIES, samesite="strict")
     user_resp = UserResponse.model_validate(new_user)
+    user_resp.is_online = True
     return AuthResponse(user=user_resp)
 
 @router.post("/login", response_model=AuthResponse)
-def login_user(encrypted_payload: EncryptedPayload, response: Response, db: Session = Depends(get_db), _: None = Depends(auth_rate_limiter)):
+async def login_user(encrypted_payload: EncryptedPayload, response: Response, db: Session = Depends(get_db), _: None = Depends(auth_rate_limiter)):
     decrypted_data = decrypt_payload(encrypted_payload.encrypted_key, encrypted_payload.payload)
     try:
         payload = UserLogin(**decrypted_data)
@@ -176,32 +182,60 @@ def login_user(encrypted_payload: EncryptedPayload, response: Response, db: Sess
         verify_captcha(payload.captcha_token, payload.captcha_answer)
 
     user = authenticate_user(db, payload.username, payload.password)
+    user.is_online = True
+    user.last_seen = datetime.utcnow()
+    db.commit()
+    manager.touch_heartbeat(user.id)
+
+    # Persist presence with row-level locking to prevent race conditions
+    await update_user_presence(user.id, True, db=db)
 
     logger.info(f"Audit: Successful login for user '{user.username}'")
     token = _create_token_with_version(user)
     response.set_cookie(key="access_token", value=token, httponly=True, secure=SECURE_COOKIES, samesite="strict")
     user_resp = UserResponse.model_validate(user)
+    user_resp.is_online = True
     return AuthResponse(user=user_resp)
 
 @router.post("/token", response_model=AuthResponse)
-def login_for_access_token(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db), _: None = Depends(auth_rate_limiter)):
+async def login_for_access_token(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db), _: None = Depends(auth_rate_limiter)):
     user = authenticate_user(db, form_data.username, form_data.password)
+    user.is_online = True
+    user.last_seen = datetime.utcnow()
+    db.commit()
+    manager.touch_heartbeat(user.id)
+
+    # Persist presence with row-level locking to prevent race conditions
+    await update_user_presence(user.id, True, db=db)
 
     logger.info(f"Audit: Successful token issuance for user '{user.username}'")
     token = _create_token_with_version(user)
     response.set_cookie(key="access_token", value=token, httponly=True, secure=SECURE_COOKIES, samesite="strict")
     user_resp = UserResponse.model_validate(user)
+    user_resp.is_online = True
     return AuthResponse(user=user_resp)
 
 @router.post("/logout")
-def logout_user(response: Response, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def logout_user(response: Response, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # Increment token_version to invalidate all existing tokens
     current_user.token_version += 1
+    current_user.is_online = False
+    current_user.last_seen = datetime.utcnow()
     db.commit()
+
+    # Persist presence with row-level locking before closing connections
+    await update_user_presence(current_user.id, False, db=db)
+
+    manager.clear_heartbeat(current_user.id)
+    await manager.close_user_connections(current_user.id)
+    if not manager.is_user_online(current_user.id):
+        await manager.broadcast_presence(current_user.id, False, exclude_user_id=current_user.id)
 
     response.delete_cookie("access_token", secure=SECURE_COOKIES, samesite="strict")
     return {"message": "Đăng xuất thành công"}
 
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
-    return current_user
+    user_resp = UserResponse.model_validate(current_user)
+    user_resp.is_online = manager.is_user_online(current_user.id)
+    return user_resp

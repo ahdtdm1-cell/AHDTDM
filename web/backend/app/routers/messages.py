@@ -141,6 +141,27 @@ def serialize_notification(notif: Notification, actor: User) -> dict:
     }
 
 
+def _serialize_participants(participants: List[ConversationParticipant]) -> List[dict]:
+    serialized = []
+    for p in participants:
+        user_data = None
+        if p.user:
+            user_resp = UserResponse.model_validate(p.user)
+            user_resp.is_online = manager.is_user_online(p.user.id)
+            user_data = user_resp
+        serialized.append({
+            "id": p.id,
+            "conversation_id": p.conversation_id,
+            "user_id": p.user_id,
+            "nickname": p.nickname,
+            "role": p.role,
+            "last_read_message_id": p.last_read_message_id,
+            "joined_at": p.joined_at,
+            "user": user_data
+        })
+    return serialized
+
+
 @router.get("/conversations", response_model=List[ConversationResponse])
 def get_user_conversations(
     db: Session = Depends(get_db),
@@ -202,7 +223,7 @@ def get_user_conversations(
             "last_message_text": conv.last_message_text,
             "last_message_at": conv.last_message_at,
             "created_at": conv.created_at,
-            "participants": conv.participants,
+            "participants": _serialize_participants(conv.participants),
             "unread_count": unread_count
         }
         result.append(conv_dict)
@@ -245,7 +266,7 @@ def get_or_create_direct_conversation(
             "last_message_text": shared_conv.last_message_text,
             "last_message_at": shared_conv.last_message_at,
             "created_at": shared_conv.created_at,
-            "participants": shared_conv.participants,
+            "participants": _serialize_participants(shared_conv.participants),
             "unread_count": 0
         }
 
@@ -272,7 +293,7 @@ def get_or_create_direct_conversation(
         "last_message_text": conv_fresh.last_message_text,
         "last_message_at": conv_fresh.last_message_at,
         "created_at": conv_fresh.created_at,
-        "participants": conv_fresh.participants,
+        "participants": _serialize_participants(conv_fresh.participants),
         "unread_count": 0
     }
 
@@ -438,9 +459,20 @@ async def send_message(
                 "sender_id": current_user.id,
                 "sender_name": current_user.display_name or current_user.username,
                 "sender_avatar": current_user.avatar_url,
+                "sender": {
+                    "id": current_user.id,
+                    "username": current_user.username,
+                    "display_name": current_user.display_name,
+                    "avatar_url": current_user.avatar_url,
+                    "role": current_user.role,
+                    "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+                    "is_online": True,
+                },
                 "content": serialized["content"],
                 "media_url": msg.media_url,
                 "message_type": msg.message_type,
+                "is_unsent": False,
+                "reactions": [],
                 "created_at": msg.created_at.isoformat()
             }
         })

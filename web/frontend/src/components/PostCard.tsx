@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ThumbsUp, MessageSquare, Share2, MoreHorizontal,
   Globe, Users as UsersIcon, Lock, Trash2
@@ -37,6 +37,16 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [commentsCount, setCommentsCount] = useState(post.comments_count);
   const [showMenu, setShowMenu] = useState(false);
   const [activePopupImage, setActivePopupImage] = useState<string | null>(null);
+
+  // Keep counts & latest comments synced when feed refreshes silently in background
+  useEffect(() => {
+    setLikesCount(post.likes_count);
+    setUserReaction(post.user_reaction || null);
+    setCommentsCount(post.comments_count);
+    if (!showComments && post.latest_comments) {
+      setComments(post.latest_comments);
+    }
+  }, [post.likes_count, post.user_reaction, post.comments_count, post.latest_comments, showComments]);
 
   // Parse media_urls
   let mediaList: string[] = [];

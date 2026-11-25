@@ -1,6 +1,7 @@
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from datetime import datetime
 import os
 import shutil
@@ -10,11 +11,37 @@ from app.database import get_db
 from app.models import User
 from app.schemas import UserResponse, PublicUserProfileResponse, UserProfileUpdate, UserPasswordUpdate, EncryptedPayload
 from app.crypto import decrypt_payload
-from app.security import get_current_user, verify_password, get_password_hash
+from app.security import get_current_user, get_optional_current_user, verify_password, get_password_hash
 from app.services.image_optimizer import process_and_save_image
+from app.services.presence import update_user_presence
+from app.websocket_manager import manager
 from pydantic import ValidationError
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+
+def _with_live_online(schema_cls, user: User):
+    resp = schema_cls.model_validate(user)
+    resp.is_online = manager.is_user_online(user.id)
+    return resp
+
+
+@router.get("", response_model=List[PublicUserProfileResponse])
+def search_users(
+    search: Optional[str] = Query(None, min_length=1, max_length=50),
+    limit: int = Query(20, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Search users by username or display name with live online status."""
+    query = db.query(User).filter(User.id != current_user.id)
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query = query.filter(
+            or_(User.username.ilike(term), User.display_name.ilike(term))
+        )
+    users = query.order_by(User.username.asc()).limit(limit).all()
+    return [_with_live_online(PublicUserProfileResponse, u) for u in users]
 
 
 @router.get("/me/profile", response_model=UserResponse)
@@ -23,7 +50,54 @@ def get_user_profile(current_user: User = Depends(get_current_user)):
     Get the current user's profile information.
     Returns 200 with profile data if authenticated, 401 if not.
     """
-    return current_user
+    return _with_live_online(UserResponse, current_user)
+
+
+@router.post("/me/heartbeat")
+async def user_presence_heartbeat(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Keep user presence alive when WebSocket is unavailable (e.g. serverless proxy)."""
+    came_online = manager.touch_heartbeat(current_user.id)
+    now = datetime.utcnow()
+    last_seen = current_user.last_seen
+    was_offline = not current_user.is_online or not last_seen or (now - last_seen).total_seconds() >= 15
+    if was_offline:
+        current_user.is_online = True
+        current_user.last_seen = now
+        db.commit()
+        # Persist presence with row-level locking to prevent race conditions
+        await update_user_presence(current_user.id, True, db=db)
+
+    if came_online:
+        await manager.broadcast_presence(current_user.id, True, exclude_user_id=current_user.id)
+
+    return {
+        "status": "ok",
+        "online_user_ids": manager.get_online_user_ids()
+    }
+
+
+@router.post("/me/offline")
+async def user_presence_offline(
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user)
+):
+    """Best-effort offline notification on tab close when no WebSocket is active."""
+    if not current_user:
+        return {"status": "ignored"}
+
+    manager.clear_heartbeat(current_user.id)
+    if not manager.is_user_online(current_user.id):
+        current_user.is_online = False
+        current_user.last_seen = datetime.utcnow()
+        db.commit()
+        # Persist presence with row-level locking before broadcasting
+        await update_user_presence(current_user.id, False, db=db)
+        await manager.broadcast_presence(current_user.id, False, exclude_user_id=current_user.id)
+
+    return {"status": "ok"}
 
 
 @router.get("/{user_id}", response_model=PublicUserProfileResponse)
@@ -42,7 +116,7 @@ def get_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-    return user
+    return _with_live_online(PublicUserProfileResponse, user)
 
 
 @router.put("/me/profile", response_model=UserResponse)

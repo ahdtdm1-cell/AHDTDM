@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Search, Plus, Send, Image as ImageIcon, Smile,
   Phone, Video, Info, MoreVertical, Undo2, Loader2,
@@ -8,11 +8,22 @@ import { Conversation, ChatMessage } from '../types/social';
 import { User } from '../types/auth';
 import { socialApi } from '../services/socialApi';
 
+export interface MessageSyncEvent {
+  seq: number;
+  type: 'unsent' | 'reaction';
+  message_id: number;
+  conversation_id: number;
+}
+
 interface MessengerPageProps {
   currentUser: User | null;
   selectedConversationId?: number | null;
   onSelectConversation: (convId: number) => void;
   incomingMessage?: ChatMessage | null;
+  messageEvent?: MessageSyncEvent | null;
+  onlineUserIds?: number[];
+  isWsConnected?: boolean;
+  onUnreadCountChange?: (count: number) => void;
   onSendTyping: (convId: number, isTyping: boolean, participantIds: number[]) => void;
   typingMap: Record<number, boolean>;
   onOpenAuth: (mode: 'login') => void;
@@ -23,6 +34,10 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
   selectedConversationId,
   onSelectConversation,
   incomingMessage,
+  messageEvent,
+  onlineUserIds = [],
+  isWsConnected = false,
+  onUnreadCountChange,
   onSendTyping,
   typingMap,
   onOpenAuth
@@ -50,18 +65,23 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
     }
   }, [selectedConversationId]);
 
-  // Load conversations list
-  useEffect(() => {
-    async function loadConvs() {
-      if (!currentUser) return;
+  const loadConvs = useCallback(async () => {
+    if (!currentUser) return;
+    try {
       const data = await socialApi.fetchConversations();
       setConversations(data);
-      if (!activeConvId && data.length > 0) {
-        setActiveConvId(data[0].id);
-      }
+      const totalUnread = data.reduce((acc, c) => acc + (c.unread_count || 0), 0);
+      onUnreadCountChange?.(totalUnread);
+      setActiveConvId((prev) => prev ?? (data.length > 0 ? data[0].id : null));
+    } catch (err) {
+      console.error(err);
     }
+  }, [currentUser, onUnreadCountChange]);
+
+  // Load conversations list
+  useEffect(() => {
     loadConvs();
-  }, [currentUser]);
+  }, [loadConvs]);
 
   // Load messages when activeConvId changes
   useEffect(() => {
@@ -71,7 +91,15 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
       setIsLoadingMessages(true);
       try {
         const msgs = await socialApi.fetchMessages(activeConvId, 0, 50);
-        if (isMounted) setMessages(msgs);
+        if (isMounted) {
+          setMessages(msgs);
+          setConversations((prev) => {
+            const next = prev.map((c) => (c.id === activeConvId ? { ...c, unread_count: 0 } : c));
+            const totalUnread = next.reduce((acc, c) => acc + (c.unread_count || 0), 0);
+            onUnreadCountChange?.(totalUnread);
+            return next;
+          });
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -82,7 +110,33 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [activeConvId]);
+  }, [activeConvId, onUnreadCountChange]);
+
+  // Silent background refresh for conversations & active messages
+  useEffect(() => {
+    if (!currentUser) return;
+    const syncMessenger = async () => {
+      if (document.visibilityState === 'hidden') return;
+      await loadConvs();
+      if (activeConvId) {
+        try {
+          const msgs = await socialApi.fetchMessages(activeConvId, 0, 50);
+          setMessages(msgs);
+        } catch {
+          // ignore transient sync error
+        }
+      }
+    };
+    const intervalMs = isWsConnected ? 25000 : 5000;
+    const timer = window.setInterval(syncMessenger, intervalMs);
+    document.addEventListener('visibilitychange', syncMessenger);
+    window.addEventListener('focus', syncMessenger);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', syncMessenger);
+      window.removeEventListener('focus', syncMessenger);
+    };
+  }, [currentUser, activeConvId, isWsConnected, loadConvs]);
 
   // Handle incoming realtime message
   useEffect(() => {
@@ -92,10 +146,17 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
           if (prev.some((m) => m.id === incomingMessage.id)) return prev;
           return [...prev, incomingMessage];
         });
+        // Mark read in backend silently if viewing this conversation
+        socialApi.fetchMessages(activeConvId, 0, 50).catch(() => {});
       }
-      // Update snippet in conversations list
-      setConversations((prev) =>
-        prev.map((c) =>
+      // Update snippet in conversations list, or fetch list if it's a brand-new conversation
+      setConversations((prev) => {
+        const exists = prev.some((c) => c.id === incomingMessage.conversation_id);
+        if (!exists) {
+          void loadConvs();
+          return prev;
+        }
+        return prev.map((c) =>
           c.id === incomingMessage.conversation_id
             ? {
                 ...c,
@@ -103,10 +164,26 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
                 last_message_at: incomingMessage.created_at
               }
             : c
+        );
+      });
+    }
+  }, [incomingMessage, activeConvId, loadConvs]);
+
+  // Handle unsend / reaction realtime updates
+  useEffect(() => {
+    if (!messageEvent || !activeConvId || messageEvent.conversation_id !== activeConvId) return;
+    if (messageEvent.type === 'unsent') {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageEvent.message_id
+            ? { ...m, is_unsent: true, content: 'Tin nhắn đã bị thu hồi', media_url: null }
+            : m
         )
       );
+    } else if (messageEvent.type === 'reaction') {
+      socialApi.fetchMessages(activeConvId, 0, 50).then(setMessages).catch(() => {});
     }
-  }, [incomingMessage, activeConvId]);
+  }, [messageEvent, activeConvId]);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -114,6 +191,15 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
   }, [messages, typingMap]);
 
   const activeConversation = conversations.find((c) => c.id === activeConvId);
+
+  const isConvOnline = (conv?: Conversation) => {
+    if (!conv?.participants) return false;
+    return conv.participants.some(
+      (p) =>
+        p.user_id !== currentUser?.id &&
+        (onlineUserIds.includes(p.user_id) || Boolean(p.user?.is_online))
+    );
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
@@ -246,6 +332,7 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
           ) : (
             filteredConversations.map((conv) => {
               const isSelected = conv.id === activeConvId;
+              const convOnline = isConvOnline(conv);
               return (
                 <div
                   key={conv.id}
@@ -268,7 +355,11 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
                       alt={conv.title || 'Chat'}
                       className="w-12 h-12 rounded-full object-cover border border-slate-200 dark:border-white/10"
                     />
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 shadow-xs" />
+                    <span
+                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 shadow-xs ${
+                        convOnline ? 'bg-emerald-500' : 'bg-slate-400'
+                      }`}
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
@@ -320,14 +411,24 @@ export const MessengerPage: React.FC<MessengerPageProps> = ({
                     alt={activeConversation.title || 'Chat'}
                     className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-slate-200 dark:border-white/10"
                   />
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900" />
+                  <span
+                    className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-900 ${
+                      isConvOnline(activeConversation) ? 'bg-emerald-500' : 'bg-slate-400'
+                    }`}
+                  />
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
                     {activeConversation.title || 'Cuộc trò chuyện'}
                   </h3>
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                    Đang hoạt động
+                  <span
+                    className={`text-xs font-medium ${
+                      isConvOnline(activeConversation)
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-slate-400'
+                    }`}
+                  >
+                    {isConvOnline(activeConversation) ? 'Đang hoạt động' : 'Ngoại tuyến'}
                   </span>
                 </div>
               </div>

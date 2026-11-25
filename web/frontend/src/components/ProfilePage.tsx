@@ -10,12 +10,13 @@ import { PostCard } from './PostCard';
 
 interface ProfilePageProps {
   userId?: number | null;
+  onlineUserIds?: number[];
   onBack: () => void;
   onOpenDirectChat?: (friendId: number, friendName: string, avatarUrl?: string) => void;
   onOpenAuth?: (mode: 'login') => void;
 }
 
-const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectChat, onOpenAuth }) => {
+const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onlineUserIds = [], onBack, onOpenDirectChat, onOpenAuth }) => {
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -255,7 +256,15 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
             <>
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{displayName}</h1>
+                  <div className="flex items-center gap-2.5">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{displayName}</h1>
+                    {(onlineUserIds.includes(profile.id) || (profile as any).is_online) && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        Đang hoạt động
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400">@{profile.username}</p>
                 </div>
                 {isOwner ? (
@@ -430,24 +439,36 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userId, onBack, onOpenDirectC
                     Chưa có bạn bè nào.
                   </div>
                 ) : (
-                  userFriends.map((f) => (
+                  userFriends.map((f) => {
+                    const isFriendOnline = onlineUserIds.includes(f.id) || Boolean(f.is_online);
+                    return (
                     <div
                       key={f.id}
                       className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-white/10 flex items-center gap-3 shadow-xs hover:shadow-md transition-shadow duration-150"
                     >
-                      <img
-                        src={f.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${f.username}`}
-                        alt={f.username}
-                        className="w-10 h-10 rounded-2xl object-cover border border-slate-200/80 dark:border-white/10"
-                      />
+                      <div className="relative shrink-0">
+                        <img
+                          src={f.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${f.username}`}
+                          alt={f.username}
+                          className="w-10 h-10 rounded-2xl object-cover border border-slate-200/80 dark:border-white/10"
+                        />
+                        <span
+                          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${
+                            isFriendOnline ? 'bg-emerald-500' : 'bg-slate-400'
+                          }`}
+                        />
+                      </div>
                       <div className="min-w-0 flex-1">
                         <span className="font-semibold text-xs text-slate-900 dark:text-white block truncate">
                           {f.display_name || f.username}
                         </span>
-                        <span className="text-[11px] text-slate-400 truncate block">@{f.username}</span>
+                        <span className={`text-[11px] truncate block ${isFriendOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                          {isFriendOnline ? 'Đang hoạt động' : `@${f.username}`}
+                        </span>
                       </div>
                     </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             )}

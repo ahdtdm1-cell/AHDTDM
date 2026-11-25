@@ -1,24 +1,29 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { authService } from '../services/authService';
 
 export interface WebSocketEventHandlers {
+  onConnected?: (data: { user_id: number; online_users: number[] }) => void;
   onChatMessage?: (msg: any) => void;
   onPresenceUpdate?: (data: { user_id: number; is_online: boolean }) => void;
   onNotification?: (notif: any) => void;
+  onFriendsUpdated?: (data: { user_id: number; friend_id: number }) => void;
   onTypingIndicator?: (data: { conversation_id: number; user_id: number; is_typing: boolean }) => void;
   onMessageSeen?: (data: { conversation_id: number; user_id: number; message_id: number }) => void;
   onMessageUnsent?: (data: { message_id: number; conversation_id: number }) => void;
   onMessageReaction?: (data: { message_id: number; conversation_id: number; user_id: number; emoji?: string }) => void;
   onNewPost?: (post: any) => void;
+  onNewReel?: (reel: any) => void;
 }
 
-export function useWebSocket(handlers: WebSocketEventHandlers) {
+export function useWebSocket(userId: number | null | undefined, handlers: WebSocketEventHandlers) {
   const [isConnected, setIsConnected] = useState(false);
   const [onlineUserIds, setOnlineUserIds] = useState<number[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef<number>(0);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const pingIntervalRef = useRef<number | null>(null);
+  const disposedRef = useRef<boolean>(false);
+  const userIdRef = useRef<number | null | undefined>(userId);
+  userIdRef.current = userId;
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
 
@@ -26,6 +31,13 @@ export function useWebSocket(handlers: WebSocketEventHandlers) {
     if (pingIntervalRef.current !== null) {
       clearInterval(pingIntervalRef.current);
       pingIntervalRef.current = null;
+    }
+  }, []);
+
+  const clearReconnectTimer = useCallback(() => {
+    if (reconnectTimeoutRef.current !== null) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
     }
   }, []);
 
@@ -39,8 +51,8 @@ export function useWebSocket(handlers: WebSocketEventHandlers) {
   }, [stopHeartbeat]);
 
   const connect = useCallback(() => {
-    const user = authService.getUser();
-    if (!user) return;
+    const activeUserId = userIdRef.current;
+    if (!activeUserId || disposedRef.current) return;
 
     if (wsRef.current && (wsRef.current.readyState === WebSocket.CONNECTING || wsRef.current.readyState === WebSocket.OPEN)) {
       return;
@@ -64,6 +76,10 @@ export function useWebSocket(handlers: WebSocketEventHandlers) {
       wsRef.current = ws;
 
       ws.onopen = () => {
+        if (disposedRef.current || wsRef.current !== ws) {
+          ws.close();
+          return;
+        }
         setIsConnected(true);
         reconnectAttemptsRef.current = 0; // Reset backoff on successful connect
         startHeartbeat();
@@ -75,7 +91,6 @@ export function useWebSocket(handlers: WebSocketEventHandlers) {
           const type = data.type;
 
           if (type === 'pong') {
-            // Heartbeat ACK from server
             return;
           }
 
@@ -83,6 +98,7 @@ export function useWebSocket(handlers: WebSocketEventHandlers) {
             if (Array.isArray(data.online_users)) {
               setOnlineUserIds(data.online_users);
             }
+            handlersRef.current.onConnected?.(data);
           } else if (type === 'presence_update') {
             setOnlineUserIds((prev) => {
               if (data.is_online) {
@@ -96,6 +112,8 @@ export function useWebSocket(handlers: WebSocketEventHandlers) {
             handlersRef.current.onChatMessage?.(data.message);
           } else if (type === 'notification') {
             handlersRef.current.onNotification?.(data.notification);
+          } else if (type === 'friends_updated') {
+            handlersRef.current.onFriendsUpdated?.(data);
           } else if (type === 'typing_indicator') {
             handlersRef.current.onTypingIndicator?.(data);
           } else if (type === 'message_seen') {
@@ -106,6 +124,8 @@ export function useWebSocket(handlers: WebSocketEventHandlers) {
             handlersRef.current.onMessageReaction?.(data);
           } else if (type === 'new_post') {
             handlersRef.current.onNewPost?.(data.post);
+          } else if (type === 'new_reel') {
+            handlersRef.current.onNewReel?.(data.reel);
           }
         } catch (err) {
           console.error('Error parsing WebSocket message', err);
@@ -113,18 +133,19 @@ export function useWebSocket(handlers: WebSocketEventHandlers) {
       };
 
       ws.onclose = () => {
+        if (wsRef.current === ws) {
+          wsRef.current = null;
+        }
         setIsConnected(false);
         stopHeartbeat();
 
-        // Exponential backoff reconnect: 1s, 2s, 4s, 8s, up to 15s max
-        if (authService.getUser()) {
+        // Exponential backoff reconnect only if this hook instance is still active for a signed-in user
+        if (!disposedRef.current && userIdRef.current) {
           const attempt = reconnectAttemptsRef.current;
           const delay = Math.min(1000 * Math.pow(2, attempt), 15000);
           reconnectAttemptsRef.current = attempt + 1;
 
-          if (reconnectTimeoutRef.current !== null) {
-            clearTimeout(reconnectTimeoutRef.current);
-          }
+          clearReconnectTimer();
           reconnectTimeoutRef.current = window.setTimeout(() => {
             reconnectTimeoutRef.current = null;
             connect();
@@ -138,33 +159,54 @@ export function useWebSocket(handlers: WebSocketEventHandlers) {
     } catch (e) {
       console.error('WebSocket connection error:', e);
     }
-  }, [startHeartbeat, stopHeartbeat]);
+  }, [clearReconnectTimer, startHeartbeat, stopHeartbeat]);
 
   useEffect(() => {
+    disposedRef.current = false;
+
+    if (!userId) {
+      clearReconnectTimer();
+      stopHeartbeat();
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      setIsConnected(false);
+      setOnlineUserIds([]);
+      return;
+    }
+
+    reconnectAttemptsRef.current = 0;
     connect();
 
-    // Reconnect immediately if tab switches back to visible
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && authService.getUser()) {
+    // Reconnect immediately if tab becomes visible, focused, or network comes back online
+    const ensureConnected = () => {
+      if (document.visibilityState !== 'hidden' && userIdRef.current) {
         if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
           reconnectAttemptsRef.current = 0;
+          clearReconnectTimer();
           connect();
         }
       }
     };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('visibilitychange', ensureConnected);
+    window.addEventListener('focus', ensureConnected);
+    window.addEventListener('online', ensureConnected);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      disposedRef.current = true;
+      document.removeEventListener('visibilitychange', ensureConnected);
+      window.removeEventListener('focus', ensureConnected);
+      window.removeEventListener('online', ensureConnected);
+      clearReconnectTimer();
       stopHeartbeat();
-      if (reconnectTimeoutRef.current !== null) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
       if (wsRef.current) {
-        wsRef.current.close();
+        const current = wsRef.current;
+        wsRef.current = null;
+        current.close();
       }
     };
-  }, [connect, stopHeartbeat]);
+  }, [userId, connect, clearReconnectTimer, stopHeartbeat]);
 
   const sendEvent = useCallback((event: Record<string, any>) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {

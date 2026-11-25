@@ -2,6 +2,7 @@ import React from 'react';
 import { ActiveChatWindow, ChatMessage } from '../types/social';
 import { User } from '../types/auth';
 import { FloatingChatWindow } from './FloatingChatWindow';
+import { MessageSyncEvent } from './MessengerPage';
 
 interface FloatingChatDockProps {
   activeChats: ActiveChatWindow[];
@@ -11,6 +12,9 @@ interface FloatingChatDockProps {
   onExpandToFullscreen: (convId: number) => void;
   onSendTyping: (convId: number, isTyping: boolean, participantIds: number[]) => void;
   incomingMessage?: ChatMessage | null;
+  messageEvent?: MessageSyncEvent | null;
+  onlineUserIds?: number[];
+  isWsConnected?: boolean;
   typingMap: Record<number, boolean>;
 }
 
@@ -22,6 +26,9 @@ export const FloatingChatDock: React.FC<FloatingChatDockProps> = ({
   onExpandToFullscreen,
   onSendTyping,
   incomingMessage,
+  messageEvent,
+  onlineUserIds = [],
+  isWsConnected = false,
   typingMap
 }) => {
   if (activeChats.length === 0) return null;
@@ -38,6 +45,9 @@ export const FloatingChatDock: React.FC<FloatingChatDockProps> = ({
           onExpandToFullscreen={onExpandToFullscreen}
           onSendTyping={onSendTyping}
           incomingMessage={incomingMessage}
+          messageEvent={messageEvent}
+          isRecipientOnline={chat.recipientId ? onlineUserIds.includes(chat.recipientId) : false}
+          isWsConnected={isWsConnected}
           isRecipientTyping={typingMap[chat.conversationId] || false}
         />
       ))}

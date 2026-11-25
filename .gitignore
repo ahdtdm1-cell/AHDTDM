@@ -59,5 +59,6 @@ web/backend/keys/
 
 docs/
 *.mp4
-/web/backend/tests/__pycache__
+__pycache__/
 *.pyc
+*.cpython-314.pyc

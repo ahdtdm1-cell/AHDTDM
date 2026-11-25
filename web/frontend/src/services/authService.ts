@@ -91,16 +91,20 @@ export const authService = {
         credentials: 'include'
       });
 
-      if (!response.ok) {
-        this.logout();
+      if (response.status === 401 || response.status === 403) {
+        this.removeUser();
         return null;
+      }
+
+      if (!response.ok) {
+        return this.getUser();
       }
 
       const user: User = await response.json();
       this.setUser(user);
       return user;
     } catch {
-      return null;
+      return this.getUser();
     }
   },
 

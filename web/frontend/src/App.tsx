@@ -7,7 +7,7 @@ import { CreatePostBox } from './components/CreatePostBox';
 import { PostCard } from './components/PostCard';
 import { ReelCard } from './components/ReelCard';
 import { FloatingChatDock } from './components/FloatingChatDock';
-import { MessengerPage } from './components/MessengerPage';
+import { MessengerPage, MessageSyncEvent } from './components/MessengerPage';
 import { FriendsTab } from './components/FriendsTab';
 import ProfilePage from './components/ProfilePage';
 import { AuthModal } from './components/AuthModal';
@@ -109,6 +109,8 @@ export const App: React.FC = () => {
   // Messenger Floating Chat Docks state
   const [activeChats, setActiveChats] = useState<ActiveChatWindow[]>([]);
   const [incomingWsMessage, setIncomingWsMessage] = useState<ChatMessage | null>(null);
+  const [messageEvent, setMessageEvent] = useState<MessageSyncEvent | null>(null);
+  const [httpOnlineUserIds, setHttpOnlineUserIds] = useState<number[]>([]);
   const [typingMap, setTypingMap] = useState<Record<number, boolean>>({});
 
   // Notifications & Unread badge
@@ -131,16 +133,26 @@ export const App: React.FC = () => {
   const [toastNotification, setToastNotification] = useState<NotificationItem | null>(null);
 
   // Load feed posts and friends
-  const loadFeed = useCallback(async () => {
-    setIsLoadingFeed(true);
+  const loadFeed = useCallback(async (silent = false) => {
+    if (!silent) setIsLoadingFeed(true);
     try {
       const data = await socialApi.fetchPosts(0, 15);
-      setPosts(data);
-      setHasMorePosts(data.length >= 15);
+      if (silent) {
+        setPosts((prev) => {
+          if (prev.length === 0) return data;
+          const topIds = new Set(data.map((p) => p.id));
+          const minTopId = data.length > 0 ? data[data.length - 1].id : 0;
+          const olderPreserved = prev.filter((p) => !topIds.has(p.id) && p.id < minTopId);
+          return [...data, ...olderPreserved];
+        });
+      } else {
+        setPosts(data);
+        setHasMorePosts(data.length >= 15);
+      }
     } catch (err) {
       console.error(err);
     } finally {
-      setIsLoadingFeed(false);
+      if (!silent) setIsLoadingFeed(false);
     }
   }, []);
 
@@ -166,7 +178,10 @@ export const App: React.FC = () => {
   }, [isLoadingMore, hasMorePosts, posts]);
 
   const loadFriends = useCallback(async () => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setFriends([]);
+      return;
+    }
     try {
       const list = await socialApi.fetchFriends();
       setFriends(list);
@@ -175,18 +190,42 @@ export const App: React.FC = () => {
     }
   }, [currentUser]);
 
-  const loadReels = useCallback(async () => {
-    setIsLoadingReels(true);
+  const loadReels = useCallback(async (silent = false) => {
+    if (!silent) setIsLoadingReels(true);
     try {
       const data = await socialApi.fetchReels(0, 10);
-      setReels(data);
-      setHasMoreReels(data.length >= 10);
+      if (silent) {
+        setReels((prev) => {
+          if (prev.length === 0) return data;
+          const topIds = new Set(data.map((r) => r.id));
+          const minTopId = data.length > 0 ? data[data.length - 1].id : 0;
+          const olderPreserved = prev.filter((r) => !topIds.has(r.id) && r.id < minTopId);
+          return [...data, ...olderPreserved];
+        });
+      } else {
+        setReels(data);
+        setHasMoreReels(data.length >= 10);
+      }
     } catch (err) {
       console.error(err);
     } finally {
-      setIsLoadingReels(false);
+      if (!silent) setIsLoadingReels(false);
     }
   }, []);
+
+  const refreshUnreadMessagesCount = useCallback(async () => {
+    if (!currentUser) {
+      setUnreadMessagesCount(0);
+      return;
+    }
+    try {
+      const convs = await socialApi.fetchConversations();
+      const unreadTotal = convs.reduce((acc, c) => acc + (c.unread_count || 0), 0);
+      setUnreadMessagesCount(unreadTotal);
+    } catch {
+      // ignore transient error
+    }
+  }, [currentUser]);
 
   const loadMoreReels = useCallback(async () => {
     if (isLoadingReels || !hasMoreReels || reels.length === 0) return;
@@ -210,13 +249,8 @@ export const App: React.FC = () => {
     loadFeed();
     loadFriends();
     loadReels();
-    if (currentUser) {
-      socialApi.fetchConversations().then((convs) => {
-        const unreadTotal = convs.reduce((acc, c) => acc + (c.unread_count || 0), 0);
-        setUnreadMessagesCount(unreadTotal);
-      }).catch(() => {});
-    }
-  }, [loadFeed, loadFriends, loadReels, currentUser]);
+    refreshUnreadMessagesCount();
+  }, [loadFeed, loadFriends, loadReels, refreshUnreadMessagesCount]);
 
   const openPostFromNotification = useCallback(async (postId: number) => {
     setActiveTab('feed');
@@ -267,7 +301,14 @@ export const App: React.FC = () => {
   }, [toastNotification]);
 
   // Realtime WebSocket Handlers
-  const { isConnected, onlineUserIds, sendEvent, sendTyping } = useWebSocket({
+  const { isConnected, onlineUserIds: wsOnlineUserIds, sendEvent, sendTyping } = useWebSocket(currentUser?.id, {
+    onConnected: (data) => {
+      if (Array.isArray(data.online_users)) {
+        const onlineSet = new Set(data.online_users);
+        setFriends((prev) => prev.map((f) => ({ ...f, is_online: onlineSet.has(f.id) })));
+      }
+      void loadFriends();
+    },
     onChatMessage: (msg) => {
       setIncomingWsMessage(msg);
       const isOwnMessage = msg.sender_id === currentUser?.id;
@@ -276,12 +317,21 @@ export const App: React.FC = () => {
         setUnreadMessagesCount((prev) => prev + 1);
       }
     },
-    onPresenceUpdate: () => {
-      loadFriends();
+    onPresenceUpdate: (data) => {
+      setFriends((prev) =>
+        prev.map((f) => (f.id === data.user_id ? { ...f, is_online: data.is_online } : f))
+      );
+      void loadFriends();
+    },
+    onFriendsUpdated: () => {
+      void loadFriends();
     },
     onNotification: (notif) => {
       const item = handleIncomingNotification(notif);
       if (item) setToastNotification(item);
+      if (notif?.type === 'friend_accept' || notif?.type === 'friend_request') {
+        void loadFriends();
+      }
     },
     onTypingIndicator: (data) => {
       setTypingMap((prev) => ({
@@ -289,11 +339,58 @@ export const App: React.FC = () => {
         [data.conversation_id]: data.is_typing
       }));
     },
-    onNewPost: (newPost) => {
-      // Refresh feed
-      loadFeed();
+    onMessageUnsent: (data) => {
+      setMessageEvent({ seq: Date.now(), type: 'unsent', message_id: data.message_id, conversation_id: data.conversation_id });
+    },
+    onMessageReaction: (data) => {
+      setMessageEvent({ seq: Date.now(), type: 'reaction', message_id: data.message_id, conversation_id: data.conversation_id });
+    },
+    onNewPost: () => {
+      void loadFeed(true);
+    },
+    onNewReel: () => {
+      void loadReels(true);
     }
   });
+
+  const onlineUserIds = isConnected ? wsOnlineUserIds : httpOnlineUserIds;
+
+  // HTTP presence heartbeat fallback when WebSocket is unavailable (e.g. Vercel proxy)
+  useEffect(() => {
+    if (!currentUser) {
+      setHttpOnlineUserIds([]);
+      return;
+    }
+
+    if (isConnected) {
+      return;
+    }
+
+    const beat = async () => {
+      if (document.visibilityState === 'hidden') return;
+      const ids = await socialApi.sendHeartbeat().catch(() => []);
+      if (ids.length > 0) {
+        setHttpOnlineUserIds(ids);
+      }
+    };
+
+    void beat();
+    const timer = window.setInterval(beat, 15000);
+    const handleUnload = () => socialApi.sendOfflineBeacon();
+
+    document.addEventListener('visibilitychange', beat);
+    window.addEventListener('focus', beat);
+    window.addEventListener('online', beat);
+    window.addEventListener('pagehide', handleUnload);
+
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', beat);
+      window.removeEventListener('focus', beat);
+      window.removeEventListener('online', beat);
+      window.removeEventListener('pagehide', handleUnload);
+    };
+  }, [currentUser, isConnected]);
 
   // Launch or Open Direct Chat Window (Messenger Dock)
   const handleOpenDirectChat = async (friendId: number, friendName: string, avatarUrl?: string) => {
@@ -398,6 +495,36 @@ export const App: React.FC = () => {
       loadGuestbookEntries();
     }
   }, [activeTab, loadGuestbookEntries]);
+
+  // Silent background sync so users never have to press F5 to see updates
+  useEffect(() => {
+    const syncInBackground = () => {
+      if (document.visibilityState === 'hidden') return;
+      if (activeTab === 'feed') {
+        void loadFeed(true);
+        void loadReels(true);
+      } else if (activeTab === 'guestbook') {
+        void loadGuestbookEntries();
+      }
+      if (currentUser) {
+        void loadFriends();
+        void refreshUnreadMessagesCount();
+      }
+    };
+
+    const intervalMs = isConnected ? 30000 : 10000;
+    const timer = window.setInterval(syncInBackground, intervalMs);
+    document.addEventListener('visibilitychange', syncInBackground);
+    window.addEventListener('focus', syncInBackground);
+    window.addEventListener('online', syncInBackground);
+
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', syncInBackground);
+      window.removeEventListener('focus', syncInBackground);
+      window.removeEventListener('online', syncInBackground);
+    };
+  }, [activeTab, currentUser, isConnected, loadFeed, loadReels, loadFriends, loadGuestbookEntries, refreshUnreadMessagesCount]);
 
   return (
     <div
@@ -572,6 +699,9 @@ export const App: React.FC = () => {
         {activeTab === 'friends' && (
           <FriendsTab
             currentUser={currentUser}
+            friends={friends}
+            onlineUserIds={onlineUserIds}
+            onFriendsChanged={loadFriends}
             onOpenDirectChat={handleOpenDirectChat}
             onViewProfile={handleViewProfile}
             onOpenAuth={handleOpenAuth}
@@ -585,6 +715,10 @@ export const App: React.FC = () => {
             selectedConversationId={messengerConvId}
             onSelectConversation={(id) => setMessengerConvId(id)}
             incomingMessage={incomingWsMessage}
+            messageEvent={messageEvent}
+            onlineUserIds={onlineUserIds}
+            isWsConnected={isConnected}
+            onUnreadCountChange={setUnreadMessagesCount}
             onSendTyping={sendTyping}
             typingMap={typingMap}
             onOpenAuth={handleOpenAuth}
@@ -654,6 +788,7 @@ export const App: React.FC = () => {
           <div className="flex-1 w-full max-w-4xl py-4 px-2">
             <ProfilePage
               userId={selectedProfileId}
+              onlineUserIds={onlineUserIds}
               onBack={() => setActiveTab('feed')}
               onOpenDirectChat={handleOpenDirectChat}
               onOpenAuth={handleOpenAuth}
@@ -671,6 +806,9 @@ export const App: React.FC = () => {
         onExpandToFullscreen={handleExpandToFullscreen}
         onSendTyping={sendTyping}
         incomingMessage={incomingWsMessage}
+        messageEvent={messageEvent}
+        onlineUserIds={onlineUserIds}
+        isWsConnected={isConnected}
         typingMap={typingMap}
       />
 
