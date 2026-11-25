@@ -7,6 +7,7 @@ import { ReelResponse, ReactionType, ReelComment } from '../types/social';
 import { User } from '../types/auth';
 import { ReactionPicker, REACTIONS } from './ReactionPicker';
 import { socialApi } from '../services/socialApi';
+import { cacheBustedVideoUrl } from '../utils/media';
 
 interface ReelCardProps {
   reel: ReelResponse;
@@ -209,7 +210,7 @@ export const ReelCard: React.FC<ReelCardProps> = ({
       {reel.content && (
         <div className="relative">
           <video
-            src={reel.content}
+            src={cacheBustedVideoUrl(reel.content)}
             controls
             poster={reel.thumbnail_url || undefined}
             className="w-full rounded-2xl aspect-video object-cover bg-slate-100 dark:bg-slate-800"

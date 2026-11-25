@@ -120,20 +120,44 @@ app.add_middleware(
 
 # Mount static files for uploads
 from fastapi.staticfiles import StaticFiles
+from starlette.datastructures import MutableHeaders
 
 
-class CachedStaticFiles(StaticFiles):
-    """Serve uploaded files with long-lived caching; filenames are UUID-based."""
+class UploadCacheMiddleware:
+    """Cache complete uploads at the edge, never partial (206) responses.
 
-    def file_response(self, *args, **kwargs):
-        response = super().file_response(*args, **kwargs)
-        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-        response.headers.setdefault("Accept-Ranges", "bytes")
-        return response
+    Vercel's CDN keys cached responses by URL only. Caching a 206 range
+    response would make later full requests receive a half file, which is why
+    some videos appeared stuck and could not be played.
+    """
 
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") != "http" or not scope.get("path", "").startswith("/uploads/"):
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_cache_headers(message):
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                if message["status"] == 206:
+                    headers["cache-control"] = "no-store"
+                    headers["vercel-cdn-cache-control"] = "no-store"
+                elif message["status"] == 200:
+                    headers["cache-control"] = "public, max-age=31536000, immutable"
+                    headers["vercel-cdn-cache-control"] = "public, max-age=31536000, immutable"
+                    headers["vercel-cache-tag"] = "uploads"
+            await send(message)
+
+        await self.app(scope, receive, send_with_cache_headers)
+
+
+app.add_middleware(UploadCacheMiddleware)
 
 os.makedirs("uploads", exist_ok=True)
-app.mount("/uploads", CachedStaticFiles(directory="uploads"), name="uploads")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Route registration (/api and /api/v1 for backward compatibility and standards)
 for prefix in [settings.API_PREFIX, f"{settings.API_PREFIX}/v1"]:

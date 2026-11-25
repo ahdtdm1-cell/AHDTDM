@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Play } from 'lucide-react';
+import { cacheBustedVideoUrl } from '../utils/media';
 
 interface LazyVideoProps {
   src: string;
@@ -61,7 +62,7 @@ export const LazyVideo: React.FC<LazyVideoProps> = ({ src, poster, className }) 
       {shouldLoad ? (
         <video
           ref={videoRef}
-          src={src}
+          src={cacheBustedVideoUrl(src)}
           poster={poster}
           controls
           playsInline

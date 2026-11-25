@@ -153,7 +153,8 @@ describe('Social & Messenger Components', () => {
 
       const video = container.querySelector('video');
       expect(video).not.toBeNull();
-      expect(video?.getAttribute('src')).toBe('/uploads/post_clip.mp4');
+      // Video URLs carry a cache-busting version so a stale CDN range entry can't break playback.
+      expect(video?.getAttribute('src')).toMatch(/^\/uploads\/post_clip\.mp4\?v=\d+$/);
       expect(container.querySelector('img[alt="Post Media"]')).toBeNull();
     });
   });
