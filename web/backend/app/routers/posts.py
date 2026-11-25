@@ -25,6 +25,17 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"]
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
+# Video attachments: a post can carry images and/or videos.
+VIDEO_EXTENSIONS = {
+    "video/mp4": ".mp4",
+    "video/quicktime": ".mov",
+    "video/x-m4v": ".m4v",
+    "video/webm": ".webm",
+    "video/ogg": ".ogg",
+    "video/3gpp": ".3gp",
+}
+MAX_VIDEO_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
+
 def serialize_post(post: Post, current_user_id: Optional[int] = None) -> dict:
     user_reaction = None
     breakdown = {}
@@ -369,8 +380,22 @@ async def upload_post_media(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user)
 ):
+    if file.content_type in VIDEO_EXTENSIONS:
+        contents = await file.read()
+        if len(contents) > MAX_VIDEO_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="Kích thước video vượt quá giới hạn 100MB.")
+
+        extension = VIDEO_EXTENSIONS[file.content_type]
+        safe_filename = f"post_{uuid.uuid4().hex}{extension}"
+        with open(os.path.join(UPLOAD_DIR, safe_filename), "wb") as f:
+            f.write(contents)
+        return {"url": f"/uploads/{safe_filename}"}
+
     if file.content_type not in ALLOWED_MIME_TYPES:
-        raise HTTPException(status_code=400, detail="Chỉ chấp nhận file ảnh (JPEG, PNG, GIF, WebP).")
+        raise HTTPException(
+            status_code=400,
+            detail="Chỉ chấp nhận file ảnh (JPEG, PNG, GIF, WebP) hoặc video (MP4, MOV, WebM, OGG, 3GP)."
+        )
 
     contents = await file.read()
     if len(contents) > MAX_FILE_SIZE:

@@ -134,6 +134,28 @@ describe('Social & Messenger Components', () => {
       fireEvent.click(commentBtn);
       expect(screen.getByPlaceholderText(/Viết bình luận/i)).toBeInTheDocument();
     });
+
+    it('renders a video player for video media', () => {
+      const videoPost: SocialPost = {
+        ...mockPost,
+        media_urls: JSON.stringify(['/uploads/post_clip.mp4'])
+      };
+
+      const { container } = render(
+        <PostCard
+          post={videoPost}
+          currentUser={mockUser}
+          onPostDeleted={vi.fn()}
+          onOpenAuth={vi.fn()}
+          onViewProfile={vi.fn()}
+        />
+      );
+
+      const video = container.querySelector('video');
+      expect(video).not.toBeNull();
+      expect(video?.getAttribute('src')).toBe('/uploads/post_clip.mp4');
+      expect(container.querySelector('img[alt="Post Media"]')).toBeNull();
+    });
   });
 
   describe('CreatePostBox Component', () => {

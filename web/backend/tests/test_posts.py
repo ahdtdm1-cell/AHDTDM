@@ -58,6 +58,27 @@ def test_create_and_read_post(test_db):
     assert len(feed) >= 1
     assert feed[0]["id"] == post_id
 
+def test_upload_post_video(test_db, tmp_path, monkeypatch):
+    """A post can be created from a video upload, not just images."""
+    db, u1, u2 = test_db
+    client = TestClient(app)
+    token1 = create_access_token(data={"sub": u1.username, "user_id": u1.id})
+
+    from app.routers import posts as posts_router
+    monkeypatch.setattr(posts_router, "UPLOAD_DIR", str(tmp_path))
+
+    res = client.post(
+        "/api/posts/upload-media",
+        files={"file": ("clip.mp4", b"fake-video-bytes", "video/mp4")},
+        headers={"Authorization": f"Bearer {token1}"}
+    )
+    assert res.status_code == 200
+    url = res.json()["url"]
+    assert url.startswith("/uploads/post_")
+    assert url.endswith(".mp4")
+    assert (tmp_path / url.rsplit("/", 1)[-1]).read_bytes() == b"fake-video-bytes"
+
+
 def test_react_and_comment_on_post(test_db):
     db, u1, u2 = test_db
     client = TestClient(app)

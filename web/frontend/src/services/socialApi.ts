@@ -93,7 +93,10 @@ export const socialApi = {
       credentials: 'include',
       body: formData
     });
-    if (!res.ok) throw new Error('Không thể tải ảnh lên.');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Không thể tải file lên.');
+    }
     const data = await res.json();
     return data.url;
   },

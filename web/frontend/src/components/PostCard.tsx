@@ -9,6 +9,7 @@ import { ReactionPicker, REACTIONS } from './ReactionPicker';
 import { CommentSection } from './CommentSection';
 import { ImagePopup } from './ImagePopup';
 import { socialApi } from '../services/socialApi';
+import { isVideoMediaUrl } from '../utils/media';
 
 interface PostCardProps {
   post: SocialPost;
@@ -179,18 +180,28 @@ export const PostCard: React.FC<PostCardProps> = ({
           {mediaList.map((url, i) => (
             <div
               key={i}
-              onClick={() => setActivePopupImage(url)}
+              onClick={() => {
+                if (!isVideoMediaUrl(url)) setActivePopupImage(url);
+              }}
               className={`relative bg-slate-100 dark:bg-slate-800 overflow-hidden cursor-pointer group ${
-                mediaList.length === 1
-                  ? 'max-h-96'
-                  : 'aspect-square sm:aspect-auto sm:h-64'
+                mediaList.length === 1 ? 'max-h-96' : 'aspect-square sm:aspect-auto sm:h-64'
               }`}
             >
-              <img
-                src={url}
-                alt="Post Media"
-                className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
-              />
+              {isVideoMediaUrl(url) ? (
+                <video
+                  src={url}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="w-full h-full object-contain bg-black"
+                />
+              ) : (
+                <img
+                  src={url}
+                  alt="Post Media"
+                  className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+                />
+              )}
             </div>
           ))}
         </div>

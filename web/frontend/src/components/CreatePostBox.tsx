@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Image as ImageIcon, Smile, Globe, Users as UsersIcon, Lock, X, Loader2 } from 'lucide-react';
+import { Image as ImageIcon, Smile, X, Loader2, Film } from 'lucide-react';
 import { User } from '../types/auth';
 import { socialApi } from '../services/socialApi';
 import { SocialPost } from '../types/social';
+import { isVideoMediaUrl } from '../utils/media';
 
 interface CreatePostBoxProps {
   currentUser: User | null;
@@ -43,11 +44,14 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+          throw new Error('Chỉ hỗ trợ tệp ảnh hoặc video.');
+        }
         const url = await socialApi.uploadPostMedia(file);
         setMediaUrls((prev) => [...prev, url]);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Lỗi khi tải ảnh lên.');
+      setErrorMsg(err.message || 'Lỗi khi tải tệp lên.');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -60,7 +64,7 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({
 
   const handleSubmit = async () => {
     if (!content.trim() && mediaUrls.length === 0) {
-      setErrorMsg('Vui lòng nhập nội dung bài viết hoặc đính kèm ảnh.');
+      setErrorMsg('Vui lòng nhập nội dung bài viết hoặc đính kèm ảnh/video.');
       return;
     }
 
@@ -182,11 +186,20 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({
               {mediaUrls.length > 0 && (
                 <div className="grid grid-cols-2 gap-2 mt-1">
                   {mediaUrls.map((url, i) => (
-                    <div key={i} className="relative rounded-2xl overflow-hidden aspect-video bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-white/10">
-                      <img src={url} alt="Media" className="w-full h-full object-cover" />
+                    <div key={i} className="relative rounded-2xl overflow-hidden aspect-video bg-slate-900 border border-slate-200/80 dark:border-white/10">
+                      {isVideoMediaUrl(url) ? (
+                        <video
+                          src={url}
+                          controls
+                          playsInline
+                          className="w-full h-full object-contain bg-black"
+                        />
+                      ) : (
+                        <img src={url} alt="Media" className="w-full h-full object-cover" />
+                      )}
                       <button
                         onClick={() => handleRemoveMedia(i)}
-                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors press-tactile"
+                        className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors press-tactile"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -199,7 +212,7 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,video/*"
                 multiple
                 onChange={handleFileChange}
                 className="hidden"
@@ -213,12 +226,13 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({
                 {isUploading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                    <span>Đang tải ảnh lên an toàn...</span>
+                    <span>Đang tải tệp lên an toàn...</span>
                   </>
                 ) : (
                   <>
                     <ImageIcon className="w-5 h-5 text-emerald-500" />
-                    <span>Thêm hình ảnh cho bài viết</span>
+                    <Film className="w-5 h-5 text-pink-500" />
+                    <span>Thêm ảnh hoặc video cho bài viết</span>
                   </>
                 )}
               </div>
