@@ -3,12 +3,19 @@ import { Image as ImageIcon, Smile, X, Loader2, Film } from 'lucide-react';
 import { User } from '../types/auth';
 import { socialApi } from '../services/socialApi';
 import { SocialPost } from '../types/social';
-import { isVideoMediaUrl } from '../utils/media';
 
 interface CreatePostBoxProps {
   currentUser: User | null;
   onPostCreated: (post: SocialPost) => void;
   onOpenAuth: (mode: 'login') => void;
+}
+
+interface MediaAttachment {
+  /** URL trả về từ server, dùng khi tạo bài viết. */
+  url: string;
+  /** Blob URL cục bộ để xem trước ngay, không phải tải lại từ server. */
+  previewUrl: string;
+  isVideo: boolean;
 }
 
 export const CreatePostBox: React.FC<CreatePostBoxProps> = ({
@@ -19,12 +26,26 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({
   const [isOpenModal, setIsOpenModal] = useState(false);
   const [content, setContent] = useState('');
   const [privacy, setPrivacy] = useState<'public' | 'friends' | 'private'>('public');
-  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const [mediaItems, setMediaItems] = useState<MediaAttachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaItemsRef = useRef<MediaAttachment[]>([]);
+  mediaItemsRef.current = mediaItems;
+
+  // Thu hồi các blob URL còn lại khi component bị gỡ.
+  React.useEffect(() => {
+    return () => {
+      mediaItemsRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    };
+  }, []);
+
+  const clearMedia = () => {
+    mediaItems.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    setMediaItems([]);
+  };
 
   const handleOpenModal = () => {
     if (!currentUser) {
@@ -47,8 +68,19 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({
         if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
           throw new Error('Chỉ hỗ trợ tệp ảnh hoặc video.');
         }
-        const url = await socialApi.uploadPostMedia(file);
-        setMediaUrls((prev) => [...prev, url]);
+
+        // Xem trước bằng blob cục bộ: video hiện ngay, không chờ tải lại từ server.
+        const previewUrl = URL.createObjectURL(file);
+        try {
+          const url = await socialApi.uploadPostMedia(file);
+          setMediaItems((prev) => [
+            ...prev,
+            { url, previewUrl, isVideo: file.type.startsWith('video/') }
+          ]);
+        } catch (uploadErr) {
+          URL.revokeObjectURL(previewUrl);
+          throw uploadErr;
+        }
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Lỗi khi tải tệp lên.');
@@ -59,11 +91,15 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({
   };
 
   const handleRemoveMedia = (index: number) => {
-    setMediaUrls((prev) => prev.filter((_, i) => i !== index));
+    setMediaItems((prev) => {
+      const removed = prev[index];
+      if (removed) URL.revokeObjectURL(removed.previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleSubmit = async () => {
-    if (!content.trim() && mediaUrls.length === 0) {
+    if (!content.trim() && mediaItems.length === 0) {
       setErrorMsg('Vui lòng nhập nội dung bài viết hoặc đính kèm ảnh/video.');
       return;
     }
@@ -71,10 +107,10 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({
     setIsSubmitting(true);
     setErrorMsg('');
     try {
-      const newPost = await socialApi.createPost(content, mediaUrls, privacy);
+      const newPost = await socialApi.createPost(content, mediaItems.map((item) => item.url), privacy);
       onPostCreated(newPost);
       setContent('');
-      setMediaUrls([]);
+      clearMedia();
       setIsOpenModal(false);
     } catch (err: any) {
       setErrorMsg(err.message || 'Lỗi khi đăng bài viết.');
@@ -183,19 +219,20 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({
               />
 
               {/* Uploaded media previews */}
-              {mediaUrls.length > 0 && (
+              {mediaItems.length > 0 && (
                 <div className="grid grid-cols-2 gap-2 mt-1">
-                  {mediaUrls.map((url, i) => (
+                  {mediaItems.map((item, i) => (
                     <div key={i} className="relative rounded-2xl overflow-hidden aspect-video bg-slate-900 border border-slate-200/80 dark:border-white/10">
-                      {isVideoMediaUrl(url) ? (
+                      {item.isVideo ? (
                         <video
-                          src={url}
+                          src={item.previewUrl}
                           controls
                           playsInline
+                          preload="metadata"
                           className="w-full h-full object-contain bg-black"
                         />
                       ) : (
-                        <img src={url} alt="Media" className="w-full h-full object-cover" />
+                        <img src={item.previewUrl} alt="Media" className="w-full h-full object-cover" />
                       )}
                       <button
                         onClick={() => handleRemoveMedia(i)}
@@ -248,7 +285,7 @@ export const CreatePostBox: React.FC<CreatePostBoxProps> = ({
             <div className="px-4 py-3.5 pb-safe border-t border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/50">
               <button
                 onClick={handleSubmit}
-                disabled={isSubmitting || isUploading || (!content.trim() && mediaUrls.length === 0)}
+                disabled={isSubmitting || isUploading || (!content.trim() && mediaItems.length === 0)}
                 className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-sm rounded-xl transition-colors duration-150 flex items-center justify-center gap-2 shadow-sm press-tactile cursor-pointer"
               >
                 {isSubmitting ? (

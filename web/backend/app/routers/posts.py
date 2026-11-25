@@ -381,15 +381,7 @@ async def upload_post_media(
     current_user: User = Depends(get_current_user)
 ):
     if file.content_type in VIDEO_EXTENSIONS:
-        contents = await file.read()
-        if len(contents) > MAX_VIDEO_FILE_SIZE:
-            raise HTTPException(status_code=400, detail="Kích thước video vượt quá giới hạn 100MB.")
-
-        extension = VIDEO_EXTENSIONS[file.content_type]
-        safe_filename = f"post_{uuid.uuid4().hex}{extension}"
-        with open(os.path.join(UPLOAD_DIR, safe_filename), "wb") as f:
-            f.write(contents)
-        return {"url": f"/uploads/{safe_filename}"}
+        return {"url": await _save_video_upload(file)}
 
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
@@ -397,9 +389,36 @@ async def upload_post_media(
             detail="Chỉ chấp nhận file ảnh (JPEG, PNG, GIF, WebP) hoặc video (MP4, MOV, WebM, OGG, 3GP)."
         )
 
-    contents = await file.read()
+    contents = await file.read(MAX_FILE_SIZE + 1)
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="Kích thước ảnh vượt quá giới hạn 10MB.")
 
     safe_filename = process_and_save_image(contents, UPLOAD_DIR, prefix="post", is_avatar=False)
     return {"url": f"/uploads/{safe_filename}"}
+
+
+async def _save_video_upload(file: UploadFile) -> str:
+    """Stream a video to disk in chunks so large uploads don't fill memory."""
+    extension = VIDEO_EXTENSIONS[file.content_type]
+    safe_filename = f"post_{uuid.uuid4().hex}{extension}"
+    filepath = os.path.join(UPLOAD_DIR, safe_filename)
+    total = 0
+
+    try:
+        with open(filepath, "wb") as f:
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > MAX_VIDEO_FILE_SIZE:
+                    raise HTTPException(status_code=400, detail="Kích thước video vượt quá giới hạn 100MB.")
+                f.write(chunk)
+    except BaseException:
+        try:
+            os.remove(filepath)
+        except OSError:
+            pass
+        raise
+
+    return f"/uploads/{safe_filename}"

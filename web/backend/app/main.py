@@ -120,8 +120,20 @@ app.add_middleware(
 
 # Mount static files for uploads
 from fastapi.staticfiles import StaticFiles
+
+
+class CachedStaticFiles(StaticFiles):
+    """Serve uploaded files with long-lived caching; filenames are UUID-based."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        response.headers.setdefault("Accept-Ranges", "bytes")
+        return response
+
+
 os.makedirs("uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/uploads", CachedStaticFiles(directory="uploads"), name="uploads")
 
 # Route registration (/api and /api/v1 for backward compatibility and standards)
 for prefix in [settings.API_PREFIX, f"{settings.API_PREFIX}/v1"]:

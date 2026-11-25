@@ -8,6 +8,7 @@ import { User } from '../types/auth';
 import { ReactionPicker, REACTIONS } from './ReactionPicker';
 import { CommentSection } from './CommentSection';
 import { ImagePopup } from './ImagePopup';
+import { LazyVideo } from './LazyVideo';
 import { socialApi } from '../services/socialApi';
 import { isVideoMediaUrl } from '../utils/media';
 
@@ -177,33 +178,36 @@ export const PostCard: React.FC<PostCardProps> = ({
               : 'grid-cols-2'
           }`}
         >
-          {mediaList.map((url, i) => (
-            <div
-              key={i}
-              onClick={() => {
-                if (!isVideoMediaUrl(url)) setActivePopupImage(url);
-              }}
-              className={`relative bg-slate-100 dark:bg-slate-800 overflow-hidden cursor-pointer group ${
-                mediaList.length === 1 ? 'max-h-96' : 'aspect-square sm:aspect-auto sm:h-64'
-              }`}
-            >
-              {isVideoMediaUrl(url) ? (
-                <video
-                  src={url}
-                  controls
-                  playsInline
-                  preload="metadata"
-                  className="w-full h-full object-contain bg-black"
-                />
-              ) : (
-                <img
-                  src={url}
-                  alt="Post Media"
-                  className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
-                />
-              )}
-            </div>
-          ))}
+          {mediaList.map((url, i) => {
+            const isVideo = isVideoMediaUrl(url);
+            return (
+              <div
+                key={i}
+                onClick={() => {
+                  if (!isVideo) setActivePopupImage(url);
+                }}
+                className={`relative overflow-hidden group ${
+                  isVideo
+                    ? 'aspect-video bg-black'
+                    : mediaList.length === 1
+                    ? 'max-h-96 bg-slate-100 dark:bg-slate-800 cursor-pointer'
+                    : 'aspect-square sm:aspect-auto sm:h-64 bg-slate-100 dark:bg-slate-800 cursor-pointer'
+                }`}
+              >
+                {isVideo ? (
+                  <LazyVideo src={url} />
+                ) : (
+                  <img
+                    src={url}
+                    alt="Post Media"
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
