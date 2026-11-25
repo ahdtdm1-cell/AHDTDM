@@ -8,6 +8,8 @@ from datetime import datetime
 from typing import Optional, Awaitable, Callable
 import logging
 
+from sqlalchemy.orm import Session
+
 from app.database import SessionLocal
 from app.models import User
 
